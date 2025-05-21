@@ -21,8 +21,12 @@ from apphorarios import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('', views.inicio, name='inicio'),
     path('estudiantes/', views.lista_estudiantes, name='lista_estudiantes'),
     path('profesores/', views.lista_profesores, name='lista_profesores'),
     path('aulas/', views.lista_aulas, name='lista_aulas'),
-     path('', views.inicio, name='inicio')
+    path('clases/', views.lista_clases, name='lista_clases'),
+    path('asignaturas/', views.lista_asignaturas, name='lista_asignaturas'),
+    path('horas/', views.lista_horas, name='lista_horas'),
+    path('grados/', views.lista_grados, name='lista_grados'),
 ]
