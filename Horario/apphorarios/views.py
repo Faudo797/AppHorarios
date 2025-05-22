@@ -1,9 +1,11 @@
 from django.http import HttpResponse
 from django.shortcuts import render
 from .models import Aula, Estudiante, Profesor, Clase, Asignatura, Hora, Grado
-
-def inicio(request):
-    return HttpResponse("¡Hola desde mi app Django!")
+from django.contrib.auth.forms import UserCreationForm
+def helloworld(request):
+    return render(request, 'login.html', {
+        'form': UserCreationForm
+    })
 
 
 def lista_estudiantes(request):
