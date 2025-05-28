@@ -16,18 +16,19 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from apphorarios import views 
-
+from apphorarios import views
+from django.contrib.auth.decorators import login_required
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', views.helloworld, name='helloworld'),
-    path('estudiantes/', views.lista_estudiantes, name='lista_estudiantes'),
-    path('profesores/', views.lista_profesores, name='lista_profesores'),
-    path('aulas/', views.lista_aulas, name='lista_aulas'),
-    path('clases/', views.lista_clases, name='lista_clases'),
-    path('asignaturas/', views.lista_asignaturas, name='lista_asignaturas'),
-    path('horas/', views.lista_horas, name='lista_horas'),
-    path('grados/', views.lista_grados, name='lista_grados'),
-    path('', views.helloworld)
+    path('', views.login_view, name='login'),  # Login como página principal
+    path('horario/', login_required(views.horario_view), name='horario_view'),
+    path('dashboard/', login_required(views.dashboard_view), name='dashboard'),
+    path('estudiantes/', login_required(views.lista_estudiantes), name='lista_estudiantes'),
+    path('profesores/', login_required(views.lista_profesores), name='lista_profesores'),
+    path('aulas/', login_required(views.lista_aulas), name='lista_aulas'),
+    path('clases/', login_required(views.lista_clases), name='lista_clases'),
+    path('asignaturas/', login_required(views.lista_asignaturas), name='lista_asignaturas'),
+    path('horas/', login_required(views.lista_horas), name='lista_horas'),
+    path('grados/', login_required(views.lista_grados), name='lista_grados'),
 ]
