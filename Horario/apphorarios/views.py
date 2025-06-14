@@ -24,12 +24,21 @@ class LoginForm(AuthenticationForm):
 class EstudianteForm(forms.ModelForm):
     class Meta:
         model = Estudiante
-        fields = ['codigo_estudiante', 'identificacion', 'primer_nombre', 'segundo_nombre', 'primer_apellido', 'segundo_apellido', 'grado', 'aula']
+        fields = ['codigo_estudiante', 'identificacion', 'primer_nombre', 'segundo_nombre', 'primer_apellido', 'segundo_apellido', 'grado']
+
 
 class ProfesorForm(forms.ModelForm):
     class Meta:
         model = Profesor
-        fields = ['codigo_profesor', 'identificacion', 'primer_nombre', 'segundo_nombre', 'primer_apellido', 'segundo_apellido', 'asignatura', 'aula', 'grado']
+        fields = [
+            'codigo_profesor','identificacion', 'primer_nombre', 'segundo_nombre', 
+            'primer_apellido', 'segundo_apellido', 'asignatura', 'grados'
+        ]
+        widgets = {
+            'grados': forms.CheckboxSelectMultiple(),  # o forms.SelectMultiple()
+        }
+
+
 
 class AulaForm(forms.ModelForm):
     class Meta:
@@ -52,18 +61,20 @@ class HoraForm(forms.ModelForm):
         fields = ['hora_inicio', 'hora_fin']
 
 class ClaseForm(forms.ModelForm):
-    codigo_estudiante_para_clase = forms.CharField(max_length=10, required=False, label='Código de Estudiante (opcional)', help_text='Introduce el código de un estudiante para asignarlo a esta clase.')
-
     class Meta:
         model = Clase
-        fields = ['descripcion_clase', 'profesor', 'aula', 'hora', 'dia']
-
-    def clean_codigo_estudiante_para_clase(self):
-        codigo = self.cleaned_data.get('codigo_estudiante_para_clase')
-        if codigo:
-            if not Estudiante.objects.filter(codigo_estudiante=codigo).exists():
-                raise forms.ValidationError("No existe un estudiante con ese código.")
-        return codigo
+        fields = ['descripcion_clase', 'profesor', 'aula', 'hora', 'dia', 'grado']
+        labels = {
+            'descripcion_clase': 'Descripción de la Clase',
+            'profesor': 'Profesor',
+            'aula': 'Aula',
+            'hora': 'Hora',
+            'dia': 'Día',
+            'grado': 'Grado',
+        }
+        help_texts = {
+            'grado': 'Selecciona el grado al que se asignará esta clase.',
+        }
 
 def login_view(request):
     if request.method == 'POST':
@@ -149,14 +160,14 @@ def horario_view(request):
                 if dia_str:
                     horario_por_dia[dia_str].append({
                         'hora': f"{clase.hora.hora_inicio.strftime('%H:%M')} - {clase.hora.hora_fin.strftime('%H:%M')}",
-                        'grado': clase.estudiantes.first().grado.nombre if clase.estudiantes.first() else 'N/A', 
+                        'grado': clase.grado.nombre,
                         'aula': clase.aula.nombre,
                     })
     elif user_rol == 'estudiante':
         if hasattr(user_obj, 'estudiante_perfil'):
             estudiante_obj = user_obj.estudiante_perfil
             print(f"DEBUG: Processing student: {estudiante_obj.primer_nombre} {estudiante_obj.primer_apellido}")
-            clases = Clase.objects.filter(estudiantes=estudiante_obj).order_by('hora__hora_inicio', 'dia')
+            clases = Clase.objects.filter(grado=estudiante_obj.grado).order_by('hora__hora_inicio', 'dia')
             print(f"DEBUG: Classes found for student: {clases.count()}")
             for clase in clases:
                 dia_str = dict(Clase.DIAS_SEMANA).get(clase.dia)
@@ -262,18 +273,17 @@ def gestionar_estudiantes(request):
             estudiante = form.save(commit=False)
             # Crear o actualizar UsuarioPersonalizado para el estudiante
             try:
-                usuario_personalizado = UsuarioPersonalizado.objects.get(username=estudiante.primer_nombre)
+                usuario_personalizado = UsuarioPersonalizado.objects.get(username=estudiante.codigo_estudiante)
                 # Si el usuario ya existe, actualizarlo
                 usuario_personalizado.set_password(estudiante.identificacion)
                 usuario_personalizado.rol = 'estudiante'
                 usuario_personalizado.save()
             except UsuarioPersonalizado.DoesNotExist:
-                # Si el usuario no existe, crearlo
                 usuario_personalizado = UsuarioPersonalizado.objects.create_user(
-                    username=estudiante.primer_nombre, 
-                    password=estudiante.identificacion,
-                    rol='estudiante'
-                )
+                username=estudiante.codigo_estudiante, 
+                password=estudiante.identificacion,
+                rol='estudiante'
+            )
             
             estudiante.usuario = usuario_personalizado # Vincular el usuario al estudiante
             estudiante.save()
@@ -322,18 +332,16 @@ def gestionar_profesores(request):
             profesor = form.save(commit=False)
             # Crear o actualizar UsuarioPersonalizado para el profesor
             try:
-                usuario_personalizado = UsuarioPersonalizado.objects.get(username=profesor.primer_nombre)
-                # Si el usuario ya existía, actualizarlo
+                usuario_personalizado = UsuarioPersonalizado.objects.get(username=profesor.codigo_profesor)
                 usuario_personalizado.set_password(profesor.identificacion)
                 usuario_personalizado.rol = 'profesor'
                 usuario_personalizado.save()
             except UsuarioPersonalizado.DoesNotExist:
-                # Si el usuario no existe, crearlo
                 usuario_personalizado = UsuarioPersonalizado.objects.create_user(
-                    username=profesor.primer_nombre, 
-                    password=profesor.identificacion,
-                    rol='profesor'
-                )
+                username=profesor.codigo_profesor, 
+                password=profesor.identificacion,
+                rol='profesor'
+            )
             
             profesor.usuario = usuario_personalizado # Vincular el usuario al profesor
             profesor.save()
