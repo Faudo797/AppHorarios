@@ -42,17 +42,11 @@ class Hora(models.Model):
 
 
 class Grado(models.Model):
-    GRADO_CHOICES = [
-        ('Preescolar', 'Preescolar'),
-        ('Primaria', 'Primaria'),
-        ('Secundaria', 'Secundaria'),
-    ]
     codigo_grado = models.CharField(max_length=10, unique=True)
-    nombre = models.CharField(max_length=100, choices=GRADO_CHOICES, default='Primaria')
+    nombre = models.CharField(max_length=100)  # Sin choices, para que sea libre
 
     def __str__(self):
         return self.nombre
-
 
 
 
@@ -72,8 +66,7 @@ class Estudiante(models.Model):
     segundo_nombre = models.CharField(max_length=100, blank=True, null=True)
     primer_apellido = models.CharField(max_length=100, default='Apellido')
     segundo_apellido = models.CharField(max_length=100, blank=True, null=True)
-    grado = models.ForeignKey(Grado, on_delete=models.CASCADE, related_name='estudiantes')
-    aula = models.ForeignKey(Aula, on_delete=models.CASCADE, related_name='estudiantes')
+    grado = models.ForeignKey('Grado', on_delete=models.CASCADE, related_name='estudiantes')
     usuario = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True, related_name='estudiante_perfil')
 
     def __str__(self):
@@ -87,19 +80,18 @@ class Profesor(models.Model):
     segundo_nombre = models.CharField(max_length=100, blank=True, null=True)
     primer_apellido = models.CharField(max_length=100, default='Apellido')
     segundo_apellido = models.CharField(max_length=100, blank=True, null=True)
-    asignatura = models.ForeignKey(Asignatura, on_delete=models.CASCADE, related_name='profesores')
-    aula = models.ForeignKey(Aula, on_delete=models.CASCADE, related_name='profesores')
-    grado = models.ForeignKey(Grado, on_delete=models.CASCADE, related_name='profesores', null=True, blank=True)
+    asignatura = models.ForeignKey('Asignatura', on_delete=models.CASCADE, related_name='profesores')
+    grados = models.ManyToManyField('Grado', related_name='profesores', blank=True)
     usuario = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True, related_name='profesor_perfil')
 
     def __str__(self):
         return f"{self.primer_nombre} {self.primer_apellido}"
 
 
+
 class Clase(models.Model):
     descripcion_clase = models.CharField(max_length=100, default='Clase sin descripción')
     profesor = models.ForeignKey(Profesor, on_delete=models.CASCADE, related_name='clases')
-    estudiantes = models.ManyToManyField(Estudiante, related_name='clases')
     aula = models.ForeignKey(Aula, on_delete=models.CASCADE, related_name='clases')
     hora = models.ForeignKey(Hora, on_delete=models.CASCADE, related_name='clases')
 
@@ -111,6 +103,11 @@ class Clase(models.Model):
         ('VI', 'Viernes'),
     ]
     dia = models.CharField(max_length=2, choices=DIAS_SEMANA, default='LU')
+
+    grado = models.ForeignKey(Grado, on_delete=models.CASCADE, related_name='clases')
+
+    def estudiantes_asociados(self):
+        return self.grado.estudiantes.all()
 
     def __str__(self):
         return f"{self.descripcion_clase}"
