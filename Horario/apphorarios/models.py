@@ -38,6 +38,9 @@ class Asignatura(models.Model):
 # Hora
 class Hora(models.Model):
     nombre = models.CharField(max_length=50, default='08:00 - 09:00')
+    nombre = models.CharField(max_length=50, default='08:00 - 09:00')  # ✅ ejemplo por defecto
+    hora_inicio = models.TimeField(default='08:00')
+    hora_fin = models.TimeField(default='09:00')
 
     def __str__(self):
         return self.nombre
@@ -55,6 +58,10 @@ class Grado(models.Model):
 # Aula
 class Aula(models.Model):
     codigo_aula = models.CharField(max_length=10, unique=True)
+    numero_aula = models.CharField(max_length=50, default='Aula 1')
+    ubicacion = models.CharField(max_length=100, default='Ubicación desconocida')
+    nombre = models.CharField(max_length=100, default='Aula')
+    capacidad = models.IntegerField(default=30)
     numero_aula = models.CharField(max_length=50, default='Aula 1')
     ubicacion = models.CharField(max_length=100, default='Ubicación desconocida')
 
@@ -112,6 +119,22 @@ class Clase(models.Model):
 
     def __str__(self):
         return f"{self.descripcion_clase}"
+
+## Creacion del modelo para login Jhonatan
+from django.contrib.auth.models import AbstractUser
+from django.db import models
+
+class UsuarioPersonalizado(AbstractUser):
+    ROLES = (
+        ('estudiante', 'Estudiante'),
+        ('profesor', 'Profesor'),
+    )
+    rol = models.CharField(max_length=10, choices=ROLES)
+    estudiante = models.OneToOneField('Estudiante', null=True, blank=True, on_delete=models.CASCADE)
+    profesor = models.OneToOneField('Profesor', null=True, blank=True, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"{self.username} ({self.rol})"
 
     class Meta:
         unique_together = [
