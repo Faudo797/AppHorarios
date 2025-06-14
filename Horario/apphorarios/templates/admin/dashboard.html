@@ -125,13 +125,13 @@
                     </div>
                 </div>
                 
-                <!-- Gestión de Horarios -->
+                <!-- Gestión de Horas de Clase -->
                 <div class="col-md-4">
                     <div class="card">
                         <div class="card-body text-center">
                             <i class="fas fa-clock card-icon"></i>
-                            <h5 class="card-title">Horarios</h5>
-                            <p class="card-text">Gestionar horarios y clases</p>
+                            <h5 class="card-title">Horas de Clase</h5>
+                            <p class="card-text">Gestionar horas de clase</p>
                             <a href="{% url 'gestionar_horas' %}" class="btn btn-primary">Gestionar</a>
                         </div>
                     </div>
@@ -145,6 +145,32 @@
                             <h5 class="card-title">Grados</h5>
                             <p class="card-text">Gestionar grados y niveles</p>
                             <a href="{% url 'gestionar_grados' %}" class="btn btn-primary">Gestionar</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-4">
+                <!-- Gestión de Clases -->
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <i class="fas fa-chalkboard card-icon"></i>
+                            <h5 class="card-title">Clases</h5>
+                            <p class="card-text">Crear y gestionar clases</p>
+                            <a href="{% url 'gestionar_clases' %}" class="btn btn-primary">Gestionar</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Ver Horarios -->
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <i class="fas fa-eye card-icon"></i>
+                            <h5 class="card-title">Ver Horarios</h5>
+                            <p class="card-text">Visualizar y revisar horarios</p>
+                            <a href="{% url 'ver_horarios' %}" class="btn btn-primary">Ver</a>
                         </div>
                     </div>
                 </div>

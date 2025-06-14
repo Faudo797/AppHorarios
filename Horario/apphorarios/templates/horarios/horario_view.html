@@ -137,6 +137,10 @@
             <button class="btn btn-primary">Guardar Cambios</button>
             <button class="btn btn-secondary">Imprimir Horario</button>
             <button class="btn btn-info">Exportar a Excel</button>
+            <form action="{% url 'logout' %}" method="post" class="ms-auto">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">Cerrar Sesión</button>
+            </form>
         </div>
         <div class="filter-section">
             <select class="form-select" style="width: 200px;">
@@ -157,45 +161,37 @@
     </div>
 
     <div class="horario-container">
-        <table class="horario-table">
-            <thead>
-                <tr class="header-row">
-                    <th>Grado</th>
-                    <th colspan="7">Lunes</th>
-                    <th colspan="7">Martes</th>
-                    <th colspan="7">Miércoles</th>
-                    <th colspan="7">Jueves</th>
-                    <th colspan="7">Viernes</th>
-                </tr>
-                <tr class="header-row">
-                    <th></th>
-                    {% for dia in "12345"|make_list %}
-                        {% for hora in "1234567"|make_list %}
-                            <th>{{ hora }}</th>
-                        {% endfor %}
-                    {% endfor %}
-                </tr>
-            </thead>
-            <tbody>
-                {% for grado in grados %}
-                <tr>
-                    <td class="grado-cell">{{ grado.nombre }}</td>
-                    {% for dia in "12345"|make_list %}
-                        {% for hora in "1234567"|make_list %}
-                            <td>
-                                {% if grado.horario %}
-                                    <span class="materia {{ grado.horario.materia_clase }}" 
-                                          data-tooltip="{{ grado.horario.profesor }} - {{ grado.horario.materia }}">
-                                        {{ grado.horario.materia_abrev }}
-                                    </span>
-                                {% endif %}
-                            </td>
-                        {% endfor %}
-                    {% endfor %}
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <h2 class="mb-4">Horario</h2>
+        <div class="row">
+            {% for dia, clases_del_dia in horario_por_dia.items %}
+                <div class="col-md-2 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header bg-primary text-white text-center">{{ dia }}</div>
+                        <div class="card-body">
+                            {% if clases_del_dia %}
+                                <ul class="list-group list-group-flush">
+                                    {% for clase in clases_del_dia %}
+                                        <li class="list-group-item">
+                                            <strong>Hora:</strong> {{ clase.hora }}<br>
+                                            {% if user_rol == 'profesor' %}
+                                                <strong>Grado:</strong> {{ clase.grado }}<br>
+                                                <strong>Aula:</strong> {{ clase.aula }}
+                                            {% elif user_rol == 'estudiante' %}
+                                                <strong>Asignatura:</strong> {{ clase.asignatura }}<br>
+                                                <strong>Profesor:</strong> {{ clase.profesor }}<br>
+                                                <strong>Aula:</strong> {{ clase.aula }}
+                                            {% endif %}
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <p class="text-center text-muted">No hay clases programadas</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
     </div>
 
     <!-- Modal para editar clase -->

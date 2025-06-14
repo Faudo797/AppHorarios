@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ver Horarios</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            padding-top: 20px;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2 class="mb-4">Visualizar Horarios</h2>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}" role="alert">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <p>{{ message }}</p>
+
+        <form method="get" action="{% url 'ver_horarios' %}">
+            <div class="mb-3">
+                <label for="user_type" class="form-label">Seleccionar Tipo de Usuario:</label>
+                <select class="form-select" id="user_type" name="user_type" onchange="toggleUserSelection()">
+                    <option value="">-- Seleccione --</option>
+                    <option value="profesor">Profesor</option>
+                    <option value="estudiante">Estudiante</option>
+                </select>
+            </div>
+
+            <div class="mb-3" id="profesor_selection" style="display: none;">
+                <label for="profesor_code" class="form-label">Código de Profesor:</label>
+                <input type="text" class="form-control" id="profesor_code" name="user_code" placeholder="Ingrese el código del profesor">
+            </div>
+
+            <div class="mb-3" id="estudiante_selection" style="display: none;">
+                <label for="estudiante_code" class="form-label">Código de Estudiante:</label>
+                <input type="text" class="form-control" id="estudiante_code" name="user_code" placeholder="Ingrese el código del estudiante">
+            </div>
+
+            <button type="submit" class="btn btn-primary">Ver Horario</button>
+        </form>
+
+        <hr>
+
+        <a href="{% url 'horario_view' %}" class="btn btn-secondary mt-3">Ver Mi Horario</a>
+    </div>
+
+    <script>
+        function toggleUserSelection() {
+            var userType = document.getElementById('user_type').value;
+            document.getElementById('profesor_selection').style.display = 'none';
+            document.getElementById('estudiante_selection').style.display = 'none';
+            // Limpiar los campos de código cuando se cambie el tipo de usuario
+            document.getElementById('profesor_code').value = '';
+            document.getElementById('estudiante_code').value = '';
+
+            if (userType === 'profesor') {
+                document.getElementById('profesor_selection').style.display = 'block';
+                document.getElementById('profesor_code').setAttribute('required', 'required');
+                document.getElementById('estudiante_code').removeAttribute('required');
+            } else if (userType === 'estudiante') {
+                document.getElementById('estudiante_selection').style.display = 'block';
+                document.getElementById('estudiante_code').setAttribute('required', 'required');
+                document.getElementById('profesor_code').removeAttribute('required');
+            }
+        }
+        // Inicializar la selección al cargar la página si ya hay un tipo seleccionado (por ejemplo, si hubo un error de validación)
+        document.addEventListener('DOMContentLoaded', toggleUserSelection);
+    </script>
+
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 

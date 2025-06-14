@@ -51,6 +51,20 @@ class HoraForm(forms.ModelForm):
         model = Hora
         fields = ['hora_inicio', 'hora_fin']
 
+class ClaseForm(forms.ModelForm):
+    codigo_estudiante_para_clase = forms.CharField(max_length=10, required=False, label='Código de Estudiante (opcional)', help_text='Introduce el código de un estudiante para asignarlo a esta clase.')
+
+    class Meta:
+        model = Clase
+        fields = ['descripcion_clase', 'profesor', 'aula', 'hora', 'dia']
+
+    def clean_codigo_estudiante_para_clase(self):
+        codigo = self.cleaned_data.get('codigo_estudiante_para_clase')
+        if codigo:
+            if not Estudiante.objects.filter(codigo_estudiante=codigo).exists():
+                raise forms.ValidationError("No existe un estudiante con ese código.")
+        return codigo
+
 def login_view(request):
     if request.method == 'POST':
         form = LoginForm(request, data=request.POST)
@@ -78,35 +92,88 @@ def login_view(request):
     return render(request, 'login.html', {'form': form})
 
 def horario_view(request):
-    # Obtener todos los grados
-    grados = Grado.objects.all().order_by('nombre')
-    
-    # Preparar los datos del horario para cada grado
-    grados_con_horario = []
-    for grado in grados:
-        # Obtener las clases del grado
-        clases = Clase.objects.filter(grado=grado)
-        horario_grado = {
-            'nombre': grado.nombre,
-            'horario': {}
-        }
-        
-        # Organizar las clases por día y hora
-        for clase in clases:
-            dia_hora_key = f"{clase.dia}_{clase.hora}"
-            horario_grado['horario'][dia_hora_key] = {
-                'materia': clase.asignatura.nombre,
-                'materia_abrev': clase.asignatura.codigo_asignatura,
-                'materia_clase': clase.asignatura.codigo_asignatura.lower(),
-                'profesor': f"{clase.profesor.primer_nombre} {clase.profesor.primer_apellido}"
-            }
-        
-        grados_con_horario.append(horario_grado)
+    # Obtener el rol del usuario logueado por defecto
+    user_rol = request.user.rol
+    user_obj = request.user
 
+    # Verificar si se solicitó un horario específico a través de GET (para el admin)
+    # Ahora buscamos por código en lugar de ID
+    requested_user_code = request.GET.get('user_code')
+    requested_user_type = request.GET.get('user_type')
+
+    print(f"DEBUG: Initial user_rol: {user_rol}, user_obj: {user_obj}")
+    print(f"DEBUG: Requested user code: {requested_user_code}, type: {requested_user_type}")
+
+    if request.user.rol == 'admin' and requested_user_code and requested_user_type:
+        try:
+            if requested_user_type == 'profesor':
+                # Buscar profesor por codigo_profesor
+                profesor_profile = Profesor.objects.get(codigo_profesor=requested_user_code)
+                user_obj = profesor_profile.usuario
+                user_rol = 'profesor'
+                print(f"DEBUG: Admin viewing professor schedule. Profesor profile: {profesor_profile}, User object: {user_obj}")
+            elif requested_user_type == 'estudiante':
+                # Buscar estudiante por codigo_estudiante
+                estudiante_profile = Estudiante.objects.get(codigo_estudiante=requested_user_code)
+                user_obj = estudiante_profile.usuario
+                user_rol = 'estudiante'
+                print(f"DEBUG: Admin viewing student schedule. Estudiante profile: {estudiante_profile}, User object: {user_obj}")
+            else:
+                messages.error(request, 'Tipo de usuario no válido.')
+                return redirect('admin_dashboard') # O redirigir a ver_horarios
+        except (Profesor.DoesNotExist, Estudiante.DoesNotExist) as e:
+            messages.error(request, f'Usuario no encontrado con ese código: {e}')
+            return redirect('admin_dashboard') # O redirigir a ver_horarios
+        
+    horario_por_dia = {
+        'Lunes': [],
+        'Martes': [],
+        'Miércoles': [],
+        'Jueves': [],
+        'Viernes': [],
+    }
+
+    print(f"DEBUG: User role for schedule processing: {user_rol}")
+    print(f"DEBUG: User object for schedule processing: {user_obj}")
+
+    # Asegurarse de que user_obj tenga un atributo 'profesor_perfil' o 'estudiante_perfil' si el rol lo indica
+    if user_rol == 'profesor':
+        if hasattr(user_obj, 'profesor_perfil'):
+            profesor_obj = user_obj.profesor_perfil
+            print(f"DEBUG: Processing professor: {profesor_obj.primer_nombre} {profesor_obj.primer_apellido}")
+            clases = Clase.objects.filter(profesor=profesor_obj).order_by('hora__hora_inicio', 'dia')
+            print(f"DEBUG: Classes found for professor: {clases.count()}")
+            for clase in clases:
+                dia_str = dict(Clase.DIAS_SEMANA).get(clase.dia)
+                print(f"DEBUG: Class: {clase.descripcion_clase}, Dia: {dia_str}, Hora: {clase.hora.hora_inicio}, Grado: {clase.estudiantes.first().grado.nombre if clase.estudiantes.first() else 'N/A'}, Aula: {clase.aula.nombre}")
+                if dia_str:
+                    horario_por_dia[dia_str].append({
+                        'hora': f"{clase.hora.hora_inicio.strftime('%H:%M')} - {clase.hora.hora_fin.strftime('%H:%M')}",
+                        'grado': clase.estudiantes.first().grado.nombre if clase.estudiantes.first() else 'N/A', 
+                        'aula': clase.aula.nombre,
+                    })
+    elif user_rol == 'estudiante':
+        if hasattr(user_obj, 'estudiante_perfil'):
+            estudiante_obj = user_obj.estudiante_perfil
+            print(f"DEBUG: Processing student: {estudiante_obj.primer_nombre} {estudiante_obj.primer_apellido}")
+            clases = Clase.objects.filter(estudiantes=estudiante_obj).order_by('hora__hora_inicio', 'dia')
+            print(f"DEBUG: Classes found for student: {clases.count()}")
+            for clase in clases:
+                dia_str = dict(Clase.DIAS_SEMANA).get(clase.dia)
+                print(f"DEBUG: Class: {clase.descripcion_clase}, Dia: {dia_str}, Hora: {clase.hora.hora_inicio}, Asignatura: {clase.profesor.asignatura.nombre}, Profesor: {clase.profesor.primer_nombre}, Aula: {clase.aula.nombre}")
+                if dia_str:
+                    horario_por_dia[dia_str].append({
+                        'hora': f"{clase.hora.hora_inicio.strftime('%H:%M')} - {clase.hora.hora_fin.strftime('%H:%M')}",
+                        'asignatura': clase.profesor.asignatura.nombre, 
+                        'profesor': f"{clase.profesor.primer_nombre} {clase.profesor.primer_apellido}",
+                        'aula': clase.aula.nombre,
+                    })
+    
+    print(f"DEBUG: Final horario_por_dia: {horario_por_dia}")
     context = {
-        'grados': grados_con_horario,
-        'dias': ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'],
-        'horas': range(1, 8)  # 7 períodos por día
+        'horario_por_dia': horario_por_dia,
+        'dias_semana': ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'],
+        'user_rol': user_rol,
     }
     
     return render(request, 'horarios/horario_view.html', context)
@@ -192,8 +259,25 @@ def gestionar_estudiantes(request):
     if request.method == 'POST':
         form = EstudianteForm(request.POST)
         if form.is_valid():
-            form.save()
-            messages.success(request, 'Estudiante agregado correctamente.')
+            estudiante = form.save(commit=False)
+            # Crear o actualizar UsuarioPersonalizado para el estudiante
+            try:
+                usuario_personalizado = UsuarioPersonalizado.objects.get(username=estudiante.primer_nombre)
+                # Si el usuario ya existe, actualizarlo
+                usuario_personalizado.set_password(estudiante.identificacion)
+                usuario_personalizado.rol = 'estudiante'
+                usuario_personalizado.save()
+            except UsuarioPersonalizado.DoesNotExist:
+                # Si el usuario no existe, crearlo
+                usuario_personalizado = UsuarioPersonalizado.objects.create_user(
+                    username=estudiante.primer_nombre, 
+                    password=estudiante.identificacion,
+                    rol='estudiante'
+                )
+            
+            estudiante.usuario = usuario_personalizado # Vincular el usuario al estudiante
+            estudiante.save()
+            messages.success(request, 'Estudiante agregado/actualizado correctamente.')
             return redirect('gestionar_estudiantes')
     else:
         form = EstudianteForm()
@@ -235,8 +319,25 @@ def gestionar_profesores(request):
     if request.method == 'POST':
         form = ProfesorForm(request.POST)
         if form.is_valid():
-            form.save()
-            messages.success(request, 'Profesor agregado correctamente.')
+            profesor = form.save(commit=False)
+            # Crear o actualizar UsuarioPersonalizado para el profesor
+            try:
+                usuario_personalizado = UsuarioPersonalizado.objects.get(username=profesor.primer_nombre)
+                # Si el usuario ya existía, actualizarlo
+                usuario_personalizado.set_password(profesor.identificacion)
+                usuario_personalizado.rol = 'profesor'
+                usuario_personalizado.save()
+            except UsuarioPersonalizado.DoesNotExist:
+                # Si el usuario no existe, crearlo
+                usuario_personalizado = UsuarioPersonalizado.objects.create_user(
+                    username=profesor.primer_nombre, 
+                    password=profesor.identificacion,
+                    rol='profesor'
+                )
+            
+            profesor.usuario = usuario_personalizado # Vincular el usuario al profesor
+            profesor.save()
+            messages.success(request, 'Profesor agregado/actualizado correctamente.')
             return redirect('gestionar_profesores')
     else:
         form = ProfesorForm()
@@ -422,3 +523,56 @@ def eliminar_hora(request, hora_id):
     hora.delete()
     messages.success(request, 'Hora eliminada correctamente.')
     return redirect('gestionar_horas')
+
+def gestionar_clases(request):
+    if request.user.rol != 'admin':
+        messages.error(request, 'No tienes permisos para acceder a esta página.')
+        return redirect('login')
+    query = request.GET.get('q', '')
+    if query:
+        clases = Clase.objects.filter(descripcion_clase__icontains=query)
+    else:
+        clases = Clase.objects.all()
+    if request.method == 'POST':
+        form = ClaseForm(request.POST)
+        if form.is_valid():
+            clase = form.save(commit=False)
+            clase.save() # Guardar la instancia de Clase primero para poder añadir estudiantes
+            
+            codigo_estudiante = form.cleaned_data.get('codigo_estudiante_para_clase')
+            if codigo_estudiante:
+                try:
+                    estudiante = Estudiante.objects.get(codigo_estudiante=codigo_estudiante)
+                    clase.estudiantes.add(estudiante) # Añadir el estudiante a la clase
+                    messages.success(request, f'Clase agregada correctamente y estudiante {estudiante.primer_nombre} asociado.')
+                except Estudiante.DoesNotExist:
+                    messages.error(request, 'El código de estudiante proporcionado no existe.')
+            else:
+                messages.success(request, 'Clase agregada correctamente.')
+            
+            return redirect('gestionar_clases')
+    else:
+        form = ClaseForm()
+    return render(request, 'admin/gestionar_clases.html', {'clases': clases, 'form': form, 'query': query})
+
+def ver_horarios(request):
+    if request.user.rol != 'admin':
+        messages.error(request, 'No tienes permisos para acceder a esta página.')
+        return redirect('login')
+    
+    # Ya no necesitamos pasar la lista completa de profesores y estudiantes a la plantilla
+    # profesores = Profesor.objects.all().order_by('primer_nombre', 'primer_apellido')
+    # estudiantes = Estudiante.objects.all().order_by('primer_nombre', 'primer_apellido')
+
+    selected_user_code = request.GET.get('user_code')
+    selected_user_type = request.GET.get('user_type')
+
+    if selected_user_code and selected_user_type:
+        # Redirigir a la vista de horario con los parámetros del usuario seleccionado
+        # Ahora pasamos el código en lugar del ID
+        return redirect(reverse('horario_view') + f'?user_code={selected_user_code}&user_type={selected_user_type}')
+
+    context = {
+        'message': 'Selecciona un tipo de usuario e ingresa su código para ver su horario.'
+    }
+    return render(request, 'admin/ver_horarios.html', context)

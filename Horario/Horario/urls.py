@@ -18,10 +18,12 @@ from django.contrib import admin
 from django.urls import path
 from apphorarios import views
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth import views as auth_views # Importar las vistas de autenticación de Django
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', views.login_view, name='login'),  # Login como página principal
+    path('logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout'), # URL de cierre de sesión
     path('horario/', login_required(views.horario_view), name='horario_view'),
     path('dashboard/', login_required(views.dashboard_view), name='dashboard'),
     path('admin-dashboard/', login_required(views.admin_dashboard), name='admin_dashboard'),
@@ -44,6 +46,9 @@ urlpatterns = [
     path('panel/horas/', login_required(views.gestionar_horas), name='gestionar_horas'),
     path('panel/horas/eliminar/<int:hora_id>/', login_required(views.eliminar_hora), name='eliminar_hora'),
     path('panel/horas/editar/<int:hora_id>/', login_required(views.editar_hora), name='editar_hora'),
+    # Nuevas rutas para Clases y Ver Horarios
+    path('panel/clases/', login_required(views.gestionar_clases), name='gestionar_clases'),
+    path('panel/ver-horarios/', login_required(views.ver_horarios), name='ver_horarios'),
     # Rutas existentes
     path('estudiantes/', login_required(views.lista_estudiantes), name='lista_estudiantes'),
     path('profesores/', login_required(views.lista_profesores), name='lista_profesores'),
