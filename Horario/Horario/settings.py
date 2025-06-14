@@ -122,5 +122,19 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-## Autorizacion Para el modelo de relacion login Jhonatan
+# Configuración de autenticación
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+]
+
 AUTH_USER_MODEL = 'apphorarios.UsuarioPersonalizado'
+
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'dashboard'
+LOGOUT_REDIRECT_URL = 'login'
+
+# Configuración de permisos
+PERMISSION_REQUIRED_MIXIN = {
+    'login_url': 'login',
+    'redirect_field_name': 'next',
+}
