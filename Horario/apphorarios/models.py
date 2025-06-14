@@ -68,7 +68,21 @@ class Clase(models.Model):
     estudiantes = models.ManyToManyField(Estudiante, related_name='clases')
     aula = models.ForeignKey(Aula, on_delete=models.CASCADE, related_name='clases')
     hora = models.ForeignKey(Hora, on_delete=models.CASCADE, related_name='clases')
-
+    DIAS_SEMANA = [
+    ('LU', 'Lunes'),
+    ('MA', 'Martes'),
+    ('MI', 'Miércoles'),
+    ('JU', 'Jueves'),
+    ('VI', 'Viernes'),
+    ]
+    dia = models.CharField(max_length=2, choices=DIAS_SEMANA)
     def __str__(self):
         return f"{self.descripcion_clase}"
 
+class Meta:
+    unique_together = ('aula', 'hora', 'dia')
+    unique_together = ('profesor', 'hora', 'dia')
+
+class Administrador(models.Model):
+    usuario = models.OneToOneField(User, on_delete=models.CASCADE)
+    nombre_completo = models.CharField(max_length=100)
