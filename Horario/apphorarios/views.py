@@ -1,4 +1,4 @@
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import render, redirect, get_object_or_404
 from .models import Aula, Estudiante, Profesor, Clase, Asignatura, Hora, Grado
 from django.contrib.auth.forms import AuthenticationForm
@@ -6,6 +6,8 @@ from django.contrib.auth import login, authenticate
 from django.contrib import messages
 from django import forms
 from django.urls import reverse
+from django.contrib.auth.decorators import login_required
+from apphorarios.models import Administrador, UsuarioPersonalizado
 
 class LoginForm(AuthenticationForm):
     TIPOS_USUARIO = [
@@ -58,12 +60,12 @@ def login_view(request):
             tipo_usuario = form.cleaned_data.get('tipo_usuario')
             user = authenticate(username=username, password=password)
             
-            if user is not None:
+            if user is not None and user.rol == tipo_usuario:
                 login(request, user)
                 messages.success(request, f'¡Bienvenido {username}!')
                 
                 # Redirigir según el tipo de usuario
-                if tipo_usuario == 'admin':
+                if user.rol == 'admin':
                     return redirect('admin_dashboard')
                 else:
                     return redirect('horario_view')
@@ -110,12 +112,12 @@ def horario_view(request):
     return render(request, 'horarios/horario_view.html', context)
 
 def admin_dashboard(request):
-    if not request.user.is_staff:
+    if request.user.rol != 'admin':
         messages.error(request, 'No tienes permisos para acceder a esta página.')
         return redirect('login')
     
     context = {
-        'year': '2024',
+        'year': '2025',
         'period': '1',
         'institution_name': 'INSTITUCIÓN EDUCATIVA DEMO'
     }
@@ -123,7 +125,7 @@ def admin_dashboard(request):
 
 def dashboard_view(request):
     context = {
-        'year': '2024',
+        'year': '2025',
         'period': '1',
         'institution_name': 'INSTITUCIÓN EDUCATIVA DEMO'
     }
@@ -164,7 +166,7 @@ def lista_grados(request):
     return render(request, 'mi_app/lista_grados.html', {'grados': grados})
 
 def editar_estudiante(request, estudiante_id):
-    if not request.user.is_staff:
+    if request.user.rol != 'admin':
         messages.error(request, 'No tienes permisos para acceder a esta página.')
         return redirect('login')
     estudiante = get_object_or_404(Estudiante, id=estudiante_id)
@@ -179,7 +181,7 @@ def editar_estudiante(request, estudiante_id):
     return render(request, 'admin/editar_estudiante.html', {'form': form, 'estudiante': estudiante})
 
 def gestionar_estudiantes(request):
-    if not request.user.is_staff:
+    if request.user.rol != 'admin':
         messages.error(request, 'No tienes permisos para acceder a esta página.')
         return redirect('login')
     query = request.GET.get('q', '')
@@ -198,7 +200,7 @@ def gestionar_estudiantes(request):
     return render(request, 'admin/gestionar_estudiantes.html', {'estudiantes': estudiantes, 'form': form, 'query': query})
 
 def eliminar_estudiante(request, estudiante_id):
-    if not request.user.is_staff:
+    if request.user.rol != 'admin':
         messages.error(request, 'No tienes permisos para acceder a esta página.')
         return redirect('login')
     estudiante = get_object_or_404(Estudiante, id=estudiante_id)
@@ -207,7 +209,7 @@ def eliminar_estudiante(request, estudiante_id):
     return redirect('gestionar_estudiantes')
 
 def editar_profesor(request, profesor_id):
-    if not request.user.is_staff:
+    if request.user.rol != 'admin':
         messages.error(request, 'No tienes permisos para acceder a esta página.')
         return redirect('login')
     profesor = get_object_or_404(Profesor, id=profesor_id)
@@ -222,7 +224,7 @@ def editar_profesor(request, profesor_id):
     return render(request, 'admin/editar_profesor.html', {'form': form, 'profesor': profesor})
 
 def gestionar_profesores(request):
-    if not request.user.is_staff:
+    if request.user.rol != 'admin':
         messages.error(request, 'No tienes permisos para acceder a esta página.')
         return redirect('login')
     query = request.GET.get('q', '')
@@ -241,7 +243,7 @@ def gestionar_profesores(request):
     return render(request, 'admin/gestionar_profesores.html', {'profesores': profesores, 'form': form, 'query': query})
 
 def eliminar_profesor(request, profesor_id):
-    if not request.user.is_staff:
+    if request.user.rol != 'admin':
         messages.error(request, 'No tienes permisos para acceder a esta página.')
         return redirect('login')
     profesor = get_object_or_404(Profesor, id=profesor_id)
@@ -250,7 +252,7 @@ def eliminar_profesor(request, profesor_id):
     return redirect('gestionar_profesores')
 
 def editar_aula(request, aula_id):
-    if not request.user.is_staff:
+    if request.user.rol != 'admin':
         messages.error(request, 'No tienes permisos para acceder a esta página.')
         return redirect('login')
     aula = get_object_or_404(Aula, id=aula_id)
@@ -265,7 +267,7 @@ def editar_aula(request, aula_id):
     return render(request, 'admin/editar_aula.html', {'form': form, 'aula': aula})
 
 def gestionar_aulas(request):
-    if not request.user.is_staff:
+    if request.user.rol != 'admin':
         messages.error(request, 'No tienes permisos para acceder a esta página.')
         return redirect('login')
     query = request.GET.get('q', '')
@@ -284,7 +286,7 @@ def gestionar_aulas(request):
     return render(request, 'admin/gestionar_aulas.html', {'aulas': aulas, 'form': form, 'query': query})
 
 def eliminar_aula(request, aula_id):
-    if not request.user.is_staff:
+    if request.user.rol != 'admin':
         messages.error(request, 'No tienes permisos para acceder a esta página.')
         return redirect('login')
     aula = get_object_or_404(Aula, id=aula_id)
@@ -293,7 +295,7 @@ def eliminar_aula(request, aula_id):
     return redirect('gestionar_aulas')
 
 def editar_asignatura(request, asignatura_id):
-    if not request.user.is_staff:
+    if request.user.rol != 'admin':
         messages.error(request, 'No tienes permisos para acceder a esta página.')
         return redirect('login')
     asignatura = get_object_or_404(Asignatura, id=asignatura_id)
@@ -308,7 +310,7 @@ def editar_asignatura(request, asignatura_id):
     return render(request, 'admin/editar_asignatura.html', {'form': form, 'asignatura': asignatura})
 
 def gestionar_asignaturas(request):
-    if not request.user.is_staff:
+    if request.user.rol != 'admin':
         messages.error(request, 'No tienes permisos para acceder a esta página.')
         return redirect('login')
     query = request.GET.get('q', '')
@@ -327,7 +329,7 @@ def gestionar_asignaturas(request):
     return render(request, 'admin/gestionar_asignaturas.html', {'asignaturas': asignaturas, 'form': form, 'query': query})
 
 def eliminar_asignatura(request, asignatura_id):
-    if not request.user.is_staff:
+    if request.user.rol != 'admin':
         messages.error(request, 'No tienes permisos para acceder a esta página.')
         return redirect('login')
     asignatura = get_object_or_404(Asignatura, id=asignatura_id)
@@ -336,7 +338,7 @@ def eliminar_asignatura(request, asignatura_id):
     return redirect('gestionar_asignaturas')
 
 def editar_grado(request, grado_id):
-    if not request.user.is_staff:
+    if request.user.rol != 'admin':
         messages.error(request, 'No tienes permisos para acceder a esta página.')
         return redirect('login')
     grado = get_object_or_404(Grado, id=grado_id)
@@ -351,7 +353,7 @@ def editar_grado(request, grado_id):
     return render(request, 'admin/editar_grado.html', {'form': form, 'grado': grado})
 
 def gestionar_grados(request):
-    if not request.user.is_staff:
+    if request.user.rol != 'admin':
         messages.error(request, 'No tienes permisos para acceder a esta página.')
         return redirect('login')
     query = request.GET.get('q', '')
@@ -370,7 +372,7 @@ def gestionar_grados(request):
     return render(request, 'admin/gestionar_grados.html', {'grados': grados, 'form': form, 'query': query})
 
 def eliminar_grado(request, grado_id):
-    if not request.user.is_staff:
+    if request.user.rol != 'admin':
         messages.error(request, 'No tienes permisos para acceder a esta página.')
         return redirect('login')
     grado = get_object_or_404(Grado, id=grado_id)
@@ -379,7 +381,7 @@ def eliminar_grado(request, grado_id):
     return redirect('gestionar_grados')
 
 def editar_hora(request, hora_id):
-    if not request.user.is_staff:
+    if request.user.rol != 'admin':
         messages.error(request, 'No tienes permisos para acceder a esta página.')
         return redirect('login')
     hora = get_object_or_404(Hora, id=hora_id)
@@ -394,7 +396,7 @@ def editar_hora(request, hora_id):
     return render(request, 'admin/editar_hora.html', {'form': form, 'hora': hora})
 
 def gestionar_horas(request):
-    if not request.user.is_staff:
+    if request.user.rol != 'admin':
         messages.error(request, 'No tienes permisos para acceder a esta página.')
         return redirect('login')
     query = request.GET.get('q', '')
@@ -413,7 +415,7 @@ def gestionar_horas(request):
     return render(request, 'admin/gestionar_horas.html', {'horas': horas, 'form': form, 'query': query})
 
 def eliminar_hora(request, hora_id):
-    if not request.user.is_staff:
+    if request.user.rol != 'admin':
         messages.error(request, 'No tienes permisos para acceder a esta página.')
         return redirect('login')
     hora = get_object_or_404(Hora, id=hora_id)

@@ -3,11 +3,11 @@ from django.contrib.auth.models import AbstractUser
 from django.conf import settings  # Para usar AUTH_USER_MODEL
 
 
-# Usuario personalizado
 class UsuarioPersonalizado(AbstractUser):
     ROLES = (
         ('estudiante', 'Estudiante'),
         ('profesor', 'Profesor'),
+        ('admin', 'Administrador'),  # Nuevo rol añadido
     )
     rol = models.CharField(max_length=10, choices=ROLES)
     estudiante = models.OneToOneField('Estudiante', null=True, blank=True, on_delete=models.CASCADE)
@@ -17,7 +17,6 @@ class UsuarioPersonalizado(AbstractUser):
         return f"{self.username} ({self.rol})"
 
 
-# Administrador
 class Administrador(models.Model):
     usuario = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     nombre_completo = models.CharField(max_length=100)
@@ -26,7 +25,6 @@ class Administrador(models.Model):
         return self.nombre_completo
 
 
-# Asignatura
 class Asignatura(models.Model):
     codigo_asignatura = models.CharField(max_length=10, unique=True)
     nombre = models.CharField(max_length=100, default='Sin nombre')
@@ -34,19 +32,15 @@ class Asignatura(models.Model):
     def __str__(self):
         return self.nombre
 
-
-# Hora
 class Hora(models.Model):
-    nombre = models.CharField(max_length=50, default='08:00 - 09:00')
-    nombre = models.CharField(max_length=50, default='08:00 - 09:00')  # ✅ ejemplo por defecto
-    hora_inicio = models.TimeField(default='08:00')
-    hora_fin = models.TimeField(default='09:00')
+    hora_inicio = models.TimeField()
+    hora_fin = models.TimeField()
 
     def __str__(self):
-        return self.nombre
+        return f"{self.hora_inicio.strftime('%H:%M')} - {self.hora_fin.strftime('%H:%M')}"
 
 
-# Grado
+
 class Grado(models.Model):
     codigo_grado = models.CharField(max_length=10, unique=True)
     nombre = models.CharField(max_length=100, default='Sin grado')
@@ -55,21 +49,17 @@ class Grado(models.Model):
         return self.nombre
 
 
-# Aula
+
+
 class Aula(models.Model):
-    codigo_aula = models.CharField(max_length=10, unique=True)
-    numero_aula = models.CharField(max_length=50, default='Aula 1')
-    ubicacion = models.CharField(max_length=100, default='Ubicación desconocida')
-    nombre = models.CharField(max_length=100, default='Aula')
-    capacidad = models.IntegerField(default=30)
-    numero_aula = models.CharField(max_length=50, default='Aula 1')
-    ubicacion = models.CharField(max_length=100, default='Ubicación desconocida')
+    nombre = models.CharField(max_length=50)  # este es el 'nombre' del formulario
+    capacidad = models.IntegerField(default=30)  # capacidad máxima predeterminada
 
     def __str__(self):
-        return f"{self.numero_aula} - {self.ubicacion}"
+        return f"{self.nombre} (Capacidad: {self.capacidad})"
 
 
-# Estudiante
+
 class Estudiante(models.Model):
     codigo_estudiante = models.CharField(max_length=10, unique=True)
     identificacion = models.CharField(max_length=20)
@@ -84,7 +74,6 @@ class Estudiante(models.Model):
         return f"{self.primer_nombre} {self.primer_apellido}"
 
 
-# Profesor
 class Profesor(models.Model):
     codigo_profesor = models.CharField(max_length=10, unique=True)
     identificacion = models.CharField(max_length=20)
@@ -100,7 +89,6 @@ class Profesor(models.Model):
         return f"{self.primer_nombre} {self.primer_apellido}"
 
 
-# Clase (Horario)
 class Clase(models.Model):
     descripcion_clase = models.CharField(max_length=100, default='Clase sin descripción')
     profesor = models.ForeignKey(Profesor, on_delete=models.CASCADE, related_name='clases')
@@ -115,31 +103,13 @@ class Clase(models.Model):
         ('JU', 'Jueves'),
         ('VI', 'Viernes'),
     ]
-    dia = models.CharField(max_length=2, choices=DIAS_SEMANA)
+    dia = models.CharField(max_length=2, choices=DIAS_SEMANA, default='LU')
 
     def __str__(self):
         return f"{self.descripcion_clase}"
-
-## Creacion del modelo para login Jhonatan
-from django.contrib.auth.models import AbstractUser
-from django.db import models
-
-class UsuarioPersonalizado(AbstractUser):
-    ROLES = (
-        ('estudiante', 'Estudiante'),
-        ('profesor', 'Profesor'),
-    )
-    rol = models.CharField(max_length=10, choices=ROLES)
-    estudiante = models.OneToOneField('Estudiante', null=True, blank=True, on_delete=models.CASCADE)
-    profesor = models.OneToOneField('Profesor', null=True, blank=True, on_delete=models.CASCADE)
-
-    def __str__(self):
-        return f"{self.username} ({self.rol})"
 
     class Meta:
         unique_together = [
             ('aula', 'hora', 'dia'),
             ('profesor', 'hora', 'dia'),
         ]
-
-
