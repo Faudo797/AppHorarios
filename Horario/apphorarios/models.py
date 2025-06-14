@@ -10,6 +10,8 @@ class Asignatura(models.Model):
 
 class Hora(models.Model):
     nombre = models.CharField(max_length=50, default='08:00 - 09:00')  # ✅ ejemplo por defecto
+    hora_inicio = models.TimeField(default='08:00')
+    hora_fin = models.TimeField(default='09:00')
 
     def __str__(self):
         return self.nombre
@@ -25,8 +27,10 @@ class Grado(models.Model):
 
 class Aula(models.Model):
     codigo_aula = models.CharField(max_length=10, unique=True)
-    numero_aula = models.CharField(max_length=50, default='Aula 1')  # ✅ ejemplo
-    ubicacion = models.CharField(max_length=100, default='Ubicación desconocida')  # ✅ ejemplo
+    numero_aula = models.CharField(max_length=50, default='Aula 1')
+    ubicacion = models.CharField(max_length=100, default='Ubicación desconocida')
+    nombre = models.CharField(max_length=100, default='Aula')
+    capacidad = models.IntegerField(default=30)
 
     def __str__(self):
         return f"{self.numero_aula} - {self.ubicacion}"
