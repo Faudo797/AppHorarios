@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduSchedule - Gestión de Horarios Escolares</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #006699;
+            --secondary-color: #004466;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 1rem 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .logo-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 2rem;
+        }
+        
+        .main-title {
+            font-size: 2.5rem;
+            margin: 0;
+            text-align: center;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            text-align: center;
+            color: #e6e6e6;
+        }
+        
+        .status-bar {
+            background-color: rgba(255,255,255,0.1);
+            padding: 0.5rem 2rem;
+            text-align: right;
+        }
+        
+        .main-content {
+            padding: 2rem;
+            background-color: white;
+            border-radius: 10px;
+            margin: 2rem;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        
+        .welcome-section {
+            margin-bottom: 2rem;
+        }
+        
+        .news-section {
+            background-color: #f8f9fa;
+            padding: 1rem;
+            border-radius: 5px;
+            border-left: 4px solid var(--primary-color);
+        }
+        
+        .promotions {
+            position: fixed;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: white;
+            padding: 1rem;
+            border-radius: 10px 0 0 10px;
+            box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+        }
+        
+        .promo-item {
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+        
+        .promo-item img {
+            width: 150px;
+            margin-bottom: 0.5rem;
+        }
+        
+        .contact-info {
+            color: var(--primary-color);
+            margin-top: 1rem;
+        }
+        
+        .institution-selector {
+            background-color: white;
+            padding: 1rem;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo-container">
+            <h1 class="main-title">EduSchedule</h1>
+            <img src="https://via.placeholder.com/100x50" alt="Logo" class="logo">
+        </div>
+        <p class="subtitle">SISTEMA INTEGRAL DE GESTIÓN DE HORARIOS ESCOLARES</p>
+        <div class="status-bar">
+            <span>Año Activo: 2024</span> |
+            <span>Periodo Activo: 1</span>
+            <button class="btn btn-light btn-sm ms-2">Inicio</button>
+        </div>
+    </header>
+
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="institution-selector">
+                    <h5>INSTITUCIÓN EDUCATIVA DEMO</h5>
+                    <select class="form-select mb-2">
+                        <option selected>Seleccionar Rol</option>
+                        <option>Administrador</option>
+                        <option>Coordinador Académico</option>
+                        <option>Docente</option>
+                        <option>Estudiante</option>
+                        <option>Secretaría</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="col-md-9">
+                <div class="main-content">
+                    <div class="welcome-section">
+                        <h2>BIENVENIDOS A EDUSCHEDULE</h2>
+                        <p>Bienvenidos a nuestro portal web de gestión educativa. Estamos brindando esta herramienta tecnológica para facilitar:</p>
+                        <ul>
+                            <li>Gestión eficiente de horarios escolares</li>
+                            <li>Coordinación entre docentes y administrativos</li>
+                            <li>Seguimiento académico en tiempo real</li>
+                            <li>Organización de recursos educativos</li>
+                        </ul>
+                        
+                        <div class="contact-info">
+                            <p>¿Necesitas ayuda? Contáctanos en:</p>
+                            <p><i class="fas fa-envelope"></i> soporte@eduschedule.com</p>
+                        </div>
+                    </div>
+
+                    <div class="news-section">
+                        <h3 class="text-center">NOTICIAS Y ACTUALIZACIONES</h3>
+                        <p class="text-center">ESTAMOS TRABAJANDO PARA MEJORAR TU EXPERIENCIA</p>
+                        <ul>
+                            <li>Nueva función de gestión de horarios por departamento</li>
+                            <li>Mejoras en la interfaz de usuario</li>
+                            <li>Sistema de notificaciones automáticas</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="promotions">
+        <h5 class="text-center">MÓDULOS</h5>
+        <div class="promo-item">
+            <img src="https://via.placeholder.com/150x200" alt="Módulo Horarios">
+            <p>Horarios</p>
+        </div>
+        <div class="promo-item">
+            <img src="https://via.placeholder.com/150x200" alt="Módulo Asistencia">
+            <p>Asistencia</p>
+        </div>
+        <div class="promo-item">
+            <img src="https://via.placeholder.com/150x200" alt="Módulo Reportes">
+            <p>Reportes</p>
+        </div>
+    </div>
+
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 

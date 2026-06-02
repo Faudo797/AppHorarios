@@ -1,0 +1,65 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block title %}Aulas | EduSchedule{% endblock %}
+{% block admin_title %}Gestion de aulas{% endblock %}
+{% block admin_subtitle %}Controla los espacios disponibles y su capacidad antes de armar los horarios.{% endblock %}
+
+{% block content %}
+    <div class="card-grid">
+        <section class="panel-card">
+            <h2 class="section-title">Nueva aula</h2>
+            <p class="section-subtitle">Registra cada espacio que puede recibir clases.</p>
+            <form method="post">
+                {% csrf_token %}
+                {% include 'partials/form_fields.html' with form=form %}
+                <div class="hero-actions mt-4">
+                    <button type="submit" class="btn btn-brand">Guardar aula</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="table-card">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+                <div>
+                    <h2 class="section-title">Aulas registradas</h2>
+                    <p class="section-subtitle mb-0">Busca por nombre y revisa la capacidad definida.</p>
+                </div>
+                <form method="get" class="toolbar">
+                    <input type="text" name="q" class="form-control" placeholder="Buscar aula" value="{{ query }}">
+                    <button type="submit" class="btn btn-soft">Buscar</button>
+                    <a href="{% url 'gestionar_aulas' %}" class="btn btn-soft">Limpiar</a>
+                </form>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th>Aula</th>
+                            <th>Capacidad</th>
+                            <th class="text-end">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for aula in aulas %}
+                            <tr>
+                                <td>{{ aula.nombre }}</td>
+                                <td>{{ aula.capacidad }}</td>
+                                <td class="text-end">
+                                    <a href="{% url 'editar_aula' aula.id %}" class="btn btn-sm btn-soft">Editar</a>
+                                    <a href="{% url 'eliminar_aula' aula.id %}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Deseas eliminar esta aula?');">Eliminar</a>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="3">
+                                    <div class="empty-state">Todavia no hay aulas registradas.</div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+{% endblock %}
