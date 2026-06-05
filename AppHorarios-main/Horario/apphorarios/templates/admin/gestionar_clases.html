@@ -42,6 +42,7 @@
                             <th>Grado</th>
                             <th>Aula</th>
                             <th>Estudiantes del grado</th>
+                            <th class="text-end">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -57,10 +58,14 @@
                                 <td>{{ clase.grado.codigo_grado }} - {{ clase.grado.nombre }}</td>
                                 <td>{{ clase.aula.nombre }}</td>
                                 <td>{{ clase.grado.estudiantes.count }}</td>
+                                <td class="text-end">
+                                    <a href="{% url 'editar_clase' clase.id %}" class="btn btn-sm btn-soft">Editar</a>
+                                    <a href="{% url 'eliminar_clase' clase.id %}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Deseas eliminar esta clase?');">Eliminar</a>
+                                </td>
                             </tr>
                         {% empty %}
                             <tr>
-                                <td colspan="7">
+                                <td colspan="8">
                                     <div class="empty-state">Todavia no hay clases programadas.</div>
                                 </td>
                             </tr>

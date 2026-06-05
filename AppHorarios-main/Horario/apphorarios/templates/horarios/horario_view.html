@@ -11,8 +11,10 @@
                 <p class="hero-subtitle">
                     {% if user_rol == 'profesor' %}
                         Horario docente consultado para el codigo {{ viewed_code }}.
-                    {% else %}
+                    {% elif user_rol == 'estudiante' %}
                         Horario del estudiante consultado para el codigo {{ viewed_code }}.
+                    {% elif user_rol == 'grado' %}
+                        Horario del grado consultado para el codigo {{ viewed_code }}.
                     {% endif %}
                 </p>
                 <div class="hero-actions mt-4">
@@ -23,12 +25,14 @@
             </div>
             <div class="summary-card">
                 <h3>Acciones</h3>
-                <p>Consulta, valida y vuelve al modulo correspondiente cuando necesites ajustar el horario.</p>
+                <p>Consulta, valida y descarga el horario semanal en formato PDF o Excel.</p>
                 <div class="hero-actions mt-3">
                     {% if admin_view %}
                         <a href="{% url 'ver_horarios' %}" class="btn btn-soft">Nueva consulta</a>
                         <a href="{% url 'admin_dashboard' %}" class="btn btn-soft">Panel admin</a>
                     {% endif %}
+                    <a href="{% url 'exportar_horario_pdf' %}?user_code={{ viewed_code }}&user_type={{ user_rol }}" class="btn btn-soft"><i class="fa-solid fa-file-pdf"></i> Descargar PDF</a>
+                    <a href="{% url 'exportar_horario_excel' %}?user_code={{ viewed_code }}&user_type={{ user_rol }}" class="btn btn-soft"><i class="fa-solid fa-file-excel"></i> Descargar Excel</a>
                     <form action="{% url 'logout' %}" method="post" class="d-inline">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-brand">Cerrar sesion</button>

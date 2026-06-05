@@ -129,3 +129,59 @@ class HorarioViewTests(BaseScheduleTestCase):
         response = self.client.get(reverse('horario_view'))
 
         self.assertRedirects(response, reverse('ver_horarios'))
+
+    def test_admin_consulta_horario_grado(self):
+        admin_user = User.objects.create_user(
+            username='ADMIN002',
+            password='123456',
+            rol='admin',
+        )
+        self.client.login(username='ADMIN002', password='123456')
+
+        response = self.client.get(reverse('ver_horarios'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '6A')
+
+        response = self.client.get(reverse('horario_view') + '?user_code=6A&user_type=grado')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Matematicas')
+
+    def test_exportar_horario_pdf_y_excel(self):
+        self.client.login(username='EST001', password='123456')
+        
+        response = self.client.get(reverse('exportar_horario_pdf'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+
+        response = self.client.get(reverse('exportar_horario_excel'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+    def test_editar_y_eliminar_clase(self):
+        admin_user = User.objects.create_user(
+            username='ADMIN003',
+            password='123456',
+            rol='admin',
+        )
+        self.client.login(username='ADMIN003', password='123456')
+
+        response = self.client.get(reverse('editar_clase', args=[self.clase.id]))
+        self.assertEqual(response.status_code, 200)
+
+        post_data = {
+            'descripcion_clase': 'Algebra Modificada',
+            'profesor': self.profesor.id,
+            'grado': self.grado_a.id,
+            'aula': self.aula.id,
+            'hora': self.hora.id,
+            'dia': 'LU',
+        }
+        response = self.client.post(reverse('editar_clase', args=[self.clase.id]), post_data)
+        self.assertRedirects(response, reverse('gestionar_clases'))
+        
+        self.clase.refresh_from_db()
+        self.assertEqual(self.clase.descripcion_clase, 'Algebra Modificada')
+
+        response = self.client.post(reverse('eliminar_clase', args=[self.clase.id]))
+        self.assertRedirects(response, reverse('gestionar_clases'))
+        self.assertFalse(Clase.objects.filter(id=self.clase.id).exists())

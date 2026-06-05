@@ -6,6 +6,15 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.http import HttpResponse
+
+# Imports para exportacion de horarios
+from reportlab.lib.pagesizes import letter, landscape
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib import colors
+import openpyxl
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 
 from apphorarios.models import Asignatura, Aula, Clase, Estudiante, Grado, Hora, Profesor, UsuarioPersonalizado
 
@@ -256,14 +265,7 @@ def dashboard_view(request):
 
 
 @login_required
-def horario_view(request):
-    requested_user_code = request.GET.get('user_code')
-    requested_user_type = request.GET.get('user_type')
-
-    if request.user.rol == 'admin' and not (requested_user_code and requested_user_type):
-        messages.info(request, 'Selecciona primero a quien deseas consultar.')
-        return redirect('ver_horarios')
-
+def _obtener_datos_horario(request, requested_user_code, requested_user_type):
     viewed_user = request.user
     viewed_role = request.user.rol
     viewed_label = request.user.username
@@ -275,9 +277,6 @@ def horario_view(request):
                 Profesor.objects.select_related('usuario', 'asignatura'),
                 codigo_profesor=requested_user_code,
             )
-            if not perfil.usuario:
-                messages.error(request, 'El profesor no tiene un usuario vinculado.')
-                return redirect('ver_horarios')
             viewed_user = perfil.usuario
             viewed_role = 'profesor'
             viewed_label = f'{perfil.primer_nombre} {perfil.primer_apellido}'
@@ -287,16 +286,19 @@ def horario_view(request):
                 Estudiante.objects.select_related('usuario', 'grado'),
                 codigo_estudiante=requested_user_code,
             )
-            if not perfil.usuario:
-                messages.error(request, 'El estudiante no tiene un usuario vinculado.')
-                return redirect('ver_horarios')
             viewed_user = perfil.usuario
             viewed_role = 'estudiante'
             viewed_label = f'{perfil.primer_nombre} {perfil.primer_apellido}'
             viewed_code = perfil.codigo_estudiante
-        else:
-            messages.error(request, 'Tipo de usuario no valido.')
-            return redirect('ver_horarios')
+        elif requested_user_type == 'grado':
+            perfil = get_object_or_404(
+                Grado,
+                codigo_grado=requested_user_code,
+            )
+            viewed_user = None
+            viewed_role = 'grado'
+            viewed_label = f'{perfil.codigo_grado} - {perfil.nombre}'
+            viewed_code = perfil.codigo_grado
 
     day_labels = {
         'Lunes': [],
@@ -313,14 +315,12 @@ def horario_view(request):
         'VI': 'Viernes',
     }
     horario_por_dia = day_labels
-
     total_clases = 0
 
     if viewed_role == 'profesor':
         profesor = getattr(viewed_user, 'profesor_perfil', None)
         if profesor is None:
-            messages.error(request, 'No fue posible encontrar el perfil del profesor.')
-            return redirect('login')
+            raise ValueError('No fue posible encontrar el perfil del profesor.')
         viewed_label = f'{profesor.primer_nombre} {profesor.primer_apellido}'
         viewed_code = profesor.codigo_profesor
 
@@ -345,8 +345,7 @@ def horario_view(request):
     elif viewed_role == 'estudiante':
         estudiante = getattr(viewed_user, 'estudiante_perfil', None)
         if estudiante is None:
-            messages.error(request, 'No fue posible encontrar el perfil del estudiante.')
-            return redirect('login')
+            raise ValueError('No fue posible encontrar el perfil del estudiante.')
         viewed_label = f'{estudiante.primer_nombre} {estudiante.primer_apellido}'
         viewed_code = estudiante.codigo_estudiante
 
@@ -368,20 +367,270 @@ def horario_view(request):
                 }
             )
         total_clases = clases.count()
-    else:
-        messages.error(request, 'Solo estudiantes, profesores o administradores pueden visualizar horarios.')
-        return redirect('login')
+    elif viewed_role == 'grado':
+        grado = get_object_or_404(Grado, codigo_grado=viewed_code)
+        clases = (
+            Clase.objects.filter(grado=grado)
+            .select_related('hora', 'aula', 'profesor__asignatura')
+            .order_by('dia', 'hora__hora_inicio')
+        )
 
-    context = {
+        for clase in clases:
+            dia_str = day_by_code.get(clase.dia)
+            horario_por_dia[dia_str].append(
+                {
+                    'hora': str(clase.hora),
+                    'titulo': clase.profesor.asignatura.nombre,
+                    'detalle_principal': f'{clase.profesor.primer_nombre} {clase.profesor.primer_apellido}',
+                    'detalle_secundario': clase.descripcion_clase,
+                    'aula': clase.aula.nombre,
+                }
+            )
+        total_clases = clases.count()
+    else:
+        raise ValueError('Solo estudiantes, profesores o administradores pueden visualizar horarios.')
+
+    return {
         'horario_por_dia': horario_por_dia,
         'user_rol': viewed_role,
         'viewed_label': viewed_label,
         'viewed_code': viewed_code,
         'total_clases': total_clases,
         'dias_activos': sum(1 for clases_dia in horario_por_dia.values() if clases_dia),
+    }
+
+
+@login_required
+def horario_view(request):
+    requested_user_code = request.GET.get('user_code')
+    requested_user_type = request.GET.get('user_type')
+
+    if request.user.rol == 'admin' and not (requested_user_code and requested_user_type):
+        messages.info(request, 'Selecciona primero a quien deseas consultar.')
+        return redirect('ver_horarios')
+
+    try:
+        data = _obtener_datos_horario(request, requested_user_code, requested_user_type)
+    except Exception as e:
+        messages.error(request, str(e))
+        return redirect('dashboard')
+
+    context = {
+        'horario_por_dia': data['horario_por_dia'],
+        'user_rol': data['user_rol'],
+        'viewed_label': data['viewed_label'],
+        'viewed_code': data['viewed_code'],
+        'total_clases': data['total_clases'],
+        'dias_activos': data['dias_activos'],
         'admin_view': request.user.rol == 'admin',
+        'requested_user_code': requested_user_code or '',
+        'requested_user_type': requested_user_type or '',
     }
     return render(request, 'horarios/horario_view.html', context)
+
+
+@login_required
+def exportar_horario_pdf(request):
+    requested_user_code = request.GET.get('user_code')
+    requested_user_type = request.GET.get('user_type')
+
+    if request.user.rol != 'admin':
+        requested_user_code = request.user.username
+        requested_user_type = request.user.rol
+
+    try:
+        data = _obtener_datos_horario(request, requested_user_code, requested_user_type)
+    except Exception as e:
+        messages.error(request, str(e))
+        return redirect('dashboard')
+
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="horario_{data["viewed_code"]}.pdf"'
+
+    doc = SimpleDocTemplate(
+        response,
+        pagesize=landscape(letter),
+        rightMargin=36,
+        leftMargin=36,
+        topMargin=36,
+        bottomMargin=36
+    )
+
+    story = []
+    styles = getSampleStyleSheet()
+
+    title_style = ParagraphStyle(
+        'TitleStyle',
+        parent=styles['Heading1'],
+        fontName='Helvetica-Bold',
+        fontSize=22,
+        textColor=colors.HexColor('#0f5c5c'),
+        spaceAfter=4
+    )
+    subtitle_style = ParagraphStyle(
+        'SubtitleStyle',
+        parent=styles['Normal'],
+        fontName='Helvetica',
+        fontSize=11,
+        textColor=colors.HexColor('#5b6470'),
+        spaceAfter=15
+    )
+    day_title_style = ParagraphStyle(
+        'DayTitleStyle',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=11,
+        textColor=colors.HexColor('#0f5c5c'),
+        alignment=1
+    )
+    class_title_style = ParagraphStyle(
+        'ClassTitleStyle',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=9,
+        textColor=colors.HexColor('#1f2a37')
+    )
+    class_detail_style = ParagraphStyle(
+        'ClassDetailStyle',
+        parent=styles['Normal'],
+        fontName='Helvetica',
+        fontSize=8,
+        textColor=colors.HexColor('#5b6470')
+    )
+
+    story.append(Paragraph(f"EduSchedule - Horario Semanal", title_style))
+    story.append(Paragraph(f"{data['viewed_label']} ({data['user_rol'].upper()}: {data['viewed_code']})", subtitle_style))
+
+    headers = [Paragraph(f"<b>Lunes</b>", day_title_style),
+               Paragraph(f"<b>Martes</b>", day_title_style),
+               Paragraph(f"<b>Miércoles</b>", day_title_style),
+               Paragraph(f"<b>Jueves</b>", day_title_style),
+               Paragraph(f"<b>Viernes</b>", day_title_style)]
+
+    horario_por_dia = data['horario_por_dia']
+    max_rows = max(len(horario_por_dia[dia]) for dia in ['Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes'])
+
+    table_data = [headers]
+
+    for row_idx in range(max_rows):
+        row = []
+        for dia in ['Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes']:
+            clases_dia = horario_por_dia[dia]
+            if row_idx < len(clases_dia):
+                clase = clases_dia[row_idx]
+                cell_elements = [
+                    Paragraph(f"<b>{clase['hora']}</b>", class_detail_style),
+                    Paragraph(clase['titulo'], class_title_style),
+                    Paragraph(f"{clase['detalle_principal']}", class_detail_style),
+                    Paragraph(f"Aula: {clase['aula']}", class_detail_style)
+                ]
+                row.append(cell_elements)
+            else:
+                row.append(Paragraph("", class_detail_style))
+        table_data.append(row)
+
+    t = Table(table_data, colWidths=[144, 144, 144, 144, 144])
+    t.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#e6f0f0')),
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+        ('TOPPADDING', (0,0), (-1,-1), 6),
+        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#0f5c5c')),
+        ('BACKGROUND', (0,1), (-1,-1), colors.HexColor('#fafafa')),
+    ]))
+
+    story.append(t)
+    doc.build(story)
+    return response
+
+
+@login_required
+def exportar_horario_excel(request):
+    requested_user_code = request.GET.get('user_code')
+    requested_user_type = request.GET.get('user_type')
+
+    if request.user.rol != 'admin':
+        requested_user_code = request.user.username
+        requested_user_type = request.user.rol
+
+    try:
+        data = _obtener_datos_horario(request, requested_user_code, requested_user_type)
+    except Exception as e:
+        messages.error(request, str(e))
+        return redirect('dashboard')
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Horario Semanal"
+
+    ws.views.sheetView[0].showGridLines = True
+
+    primary_color = "0F5C5C"
+    light_bg = "FAF7EF"
+
+    ws['A1'] = "EduSchedule - Horario Semanal"
+    ws['A1'].font = Font(name="Calibri", size=16, bold=True, color="0F5C5C")
+    ws.merge_cells('A1:E1')
+
+    ws['A2'] = f"{data['viewed_label']} ({data['user_rol'].upper()}: {data['viewed_code']})"
+    ws['A2'].font = Font(name="Calibri", size=11, italic=True)
+    ws.merge_cells('A2:E2')
+
+    ws.append([])
+
+    headers = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"]
+    ws.append(headers)
+
+    header_fill = PatternFill(start_color=primary_color, end_color=primary_color, fill_type="solid")
+    header_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+    header_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
+
+    for col in range(1, 6):
+        cell = ws.cell(row=4, column=col)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = header_align
+
+    horario_por_dia = data['horario_por_dia']
+    max_rows = max(len(horario_por_dia[dia]) for dia in ['Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes'])
+
+    thin_border = Border(
+        left=Side(style='thin', color="DDDDDD"),
+        right=Side(style='thin', color="DDDDDD"),
+        top=Side(style='thin', color="DDDDDD"),
+        bottom=Side(style='thin', color="DDDDDD")
+    )
+
+    cell_align = Alignment(horizontal="left", vertical="top", wrap_text=True)
+
+    for row_idx in range(max_rows):
+        excel_row_num = 5 + row_idx
+        for col_idx, dia in enumerate(['Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes'], start=1):
+            clases_dia = horario_por_dia[dia]
+            cell = ws.cell(row=excel_row_num, column=col_idx)
+            cell.alignment = cell_align
+            cell.border = thin_border
+            
+            if row_idx < len(clases_dia):
+                clase = clases_dia[row_idx]
+                text = f"[{clase['hora']}]\n{clase['titulo']}\n{clase['detalle_principal']}\nAula: {clase['aula']}"
+                cell.value = text
+                cell.fill = PatternFill(start_color=light_bg, end_color=light_bg, fill_type="solid")
+            else:
+                cell.value = ""
+
+    for col_letter in ['A', 'B', 'C', 'D', 'E']:
+        ws.column_dimensions[col_letter].width = 25
+
+    ws.row_dimensions[4].height = 25
+    for row_idx in range(max_rows):
+        ws.row_dimensions[5 + row_idx].height = 75
+
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename="horario_{data["viewed_code"]}.xlsx"'
+    wb.save(response)
+    return response
 
 
 @login_required
@@ -841,6 +1090,35 @@ def gestionar_clases(request):
 
 
 @login_required
+def editar_clase(request, clase_id):
+    admin_redirect = _guard_admin(request)
+    if admin_redirect:
+        return admin_redirect
+
+    clase = get_object_or_404(Clase, id=clase_id)
+    form = ClaseForm(request.POST or None, instance=clase)
+
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        messages.success(request, 'Clase actualizada correctamente.')
+        return redirect('gestionar_clases')
+
+    return render(request, 'admin/editar_clase.html', {'form': form, 'clase': clase})
+
+
+@login_required
+def eliminar_clase(request, clase_id):
+    admin_redirect = _guard_admin(request)
+    if admin_redirect:
+        return admin_redirect
+
+    clase = get_object_or_404(Clase, id=clase_id)
+    clase.delete()
+    messages.success(request, 'Clase eliminada correctamente.')
+    return redirect('gestionar_clases')
+
+
+@login_required
 def ver_horarios(request):
     admin_redirect = _guard_admin(request)
     if admin_redirect:
@@ -856,9 +1134,10 @@ def ver_horarios(request):
         )
 
     context = {
-        'message': 'Selecciona un profesor o estudiante para consultar su horario.',
+        'message': 'Selecciona un profesor, estudiante o grado para consultar su horario.',
         'selected_user_type': selected_user_type,
         'profesores': Profesor.objects.select_related('asignatura').order_by('primer_nombre', 'primer_apellido'),
         'estudiantes': Estudiante.objects.select_related('grado').order_by('primer_nombre', 'primer_apellido'),
+        'grados': Grado.objects.all().order_by('codigo_grado'),
     }
     return render(request, 'admin/ver_horarios.html', context)

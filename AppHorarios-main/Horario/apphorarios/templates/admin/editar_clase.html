@@ -1,20 +1,20 @@
 {% extends 'admin/base_admin.html' %}
 
-{% block title %}Editar Estudiante | EduSchedule{% endblock %}
-{% block admin_title %}Editar Estudiante{% endblock %}
-{% block admin_subtitle %}Modifica los datos del estudiante seleccionado.{% endblock %}
+{% block title %}Editar Clase | EduSchedule{% endblock %}
+{% block admin_title %}Editar Clase{% endblock %}
+{% block admin_subtitle %}Modifica los datos de la clase seleccionada.{% endblock %}
 
 {% block content %}
     <div class="card-grid justify-content-center">
         <section class="panel-card" style="grid-column: 1 / -1; max-width: 700px; margin: 0 auto; width: 100%;">
-            <h2 class="section-title">Editar estudiante: {{ estudiante.primer_nombre }} {{ estudiante.primer_apellido }}</h2>
-            <p class="section-subtitle">Actualiza la información y el sistema sincronizará los accesos de usuario.</p>
+            <h2 class="section-title">Editar clase: {{ clase.descripcion_clase }}</h2>
+            <p class="section-subtitle">El sistema validará de nuevo cualquier cruce de horario o de aula al guardar.</p>
             <form method="post">
                 {% csrf_token %}
                 {% include 'partials/form_fields.html' with form=form %}
                 <div class="hero-actions mt-4">
                     <button type="submit" class="btn btn-brand">Guardar cambios</button>
-                    <a href="{% url 'gestionar_estudiantes' %}" class="btn btn-soft">Cancelar</a>
+                    <a href="{% url 'gestionar_clases' %}" class="btn btn-soft">Cancelar</a>
                 </div>
             </form>
         </section>

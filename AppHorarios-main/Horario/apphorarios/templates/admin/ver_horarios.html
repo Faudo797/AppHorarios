@@ -17,6 +17,7 @@
                             <option value="">Selecciona una opcion</option>
                             <option value="profesor" {% if selected_user_type == 'profesor' %}selected{% endif %}>Profesor</option>
                             <option value="estudiante" {% if selected_user_type == 'estudiante' %}selected{% endif %}>Estudiante</option>
+                            <option value="grado" {% if selected_user_type == 'grado' %}selected{% endif %}>Grado</option>
                         </select>
                     </div>
 
@@ -39,6 +40,18 @@
                             {% for estudiante in estudiantes %}
                                 <option value="{{ estudiante.codigo_estudiante }}">
                                     {{ estudiante.codigo_estudiante }} - {{ estudiante.primer_nombre }} {{ estudiante.primer_apellido }} / {{ estudiante.grado.nombre }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="field-block" id="grado_wrapper">
+                        <label for="grado_code">Grado</label>
+                        <select class="form-select" id="grado_code" name="user_code_grado">
+                            <option value="">Selecciona un grado</option>
+                            {% for grado in grados %}
+                                <option value="{{ grado.codigo_grado }}">
+                                    {{ grado.codigo_grado }} - {{ grado.nombre }}
                                 </option>
                             {% endfor %}
                         </select>
@@ -81,9 +94,11 @@
             const type = document.getElementById('user_type').value;
             const profesorWrapper = document.getElementById('profesor_wrapper');
             const estudianteWrapper = document.getElementById('estudiante_wrapper');
+            const gradoWrapper = document.getElementById('grado_wrapper');
 
             profesorWrapper.style.display = type === 'profesor' ? 'block' : 'none';
             estudianteWrapper.style.display = type === 'estudiante' ? 'block' : 'none';
+            gradoWrapper.style.display = type === 'grado' ? 'block' : 'none';
         }
 
         function syncSelectedCode() {
@@ -91,8 +106,17 @@
             const hiddenInput = document.getElementById('final_user_code');
             const profesorCode = document.getElementById('profesor_code').value;
             const estudianteCode = document.getElementById('estudiante_code').value;
+            const gradoCode = document.getElementById('grado_code').value;
 
-            hiddenInput.value = type === 'profesor' ? profesorCode : estudianteCode;
+            if (type === 'profesor') {
+                hiddenInput.value = profesorCode;
+            } else if (type === 'estudiante') {
+                hiddenInput.value = estudianteCode;
+            } else if (type === 'grado') {
+                hiddenInput.value = gradoCode;
+            } else {
+                hiddenInput.value = '';
+            }
         }
 
         document.getElementById('schedule-search-form').addEventListener('submit', function () {

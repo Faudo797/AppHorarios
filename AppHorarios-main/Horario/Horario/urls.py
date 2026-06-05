@@ -48,7 +48,12 @@ urlpatterns = [
     path('panel/horas/editar/<int:hora_id>/', login_required(views.editar_hora), name='editar_hora'),
     # Nuevas rutas para Clases y Ver Horarios
     path('panel/clases/', login_required(views.gestionar_clases), name='gestionar_clases'),
+    path('panel/clases/eliminar/<int:clase_id>/', login_required(views.eliminar_clase), name='eliminar_clase'),
+    path('panel/clases/editar/<int:clase_id>/', login_required(views.editar_clase), name='editar_clase'),
     path('panel/ver-horarios/', login_required(views.ver_horarios), name='ver_horarios'),
+    # Rutas para exportar horarios
+    path('horario/exportar/pdf/', login_required(views.exportar_horario_pdf), name='exportar_horario_pdf'),
+    path('horario/exportar/excel/', login_required(views.exportar_horario_excel), name='exportar_horario_excel'),
     # Rutas existentes
     path('estudiantes/', login_required(views.lista_estudiantes), name='lista_estudiantes'),
     path('profesores/', login_required(views.lista_profesores), name='lista_profesores'),
