@@ -1,0 +1,22 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block title %}Editar Profesor | EduSchedule{% endblock %}
+{% block admin_title %}Editar Profesor{% endblock %}
+{% block admin_subtitle %}Modifica los datos del profesor seleccionado.{% endblock %}
+
+{% block content %}
+    <div class="card-grid justify-content-center">
+        <section class="panel-card" style="grid-column: 1 / -1; max-width: 700px; margin: 0 auto; width: 100%;">
+            <h2 class="section-title">Editar profesor: {{ profesor.primer_nombre }} {{ profesor.primer_apellido }}</h2>
+            <p class="section-subtitle">Actualiza la materia asignada, grados vinculados y datos personales.</p>
+            <form method="post">
+                {% csrf_token %}
+                {% include 'partials/form_fields.html' with form=form %}
+                <div class="hero-actions mt-4">
+                    <button type="submit" class="btn btn-brand">Guardar cambios</button>
+                    <a href="{% url 'gestionar_profesores' %}" class="btn btn-soft">Cancelar</a>
+                </div>
+            </form>
+        </section>
+    </div>
+{% endblock %}

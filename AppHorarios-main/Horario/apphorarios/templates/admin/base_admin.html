@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block topbar %}
+    <section class="hero-card">
+        <div class="top-grid">
+            <div>
+                <div class="eyebrow">Panel Administrativo</div>
+                <h1 class="hero-title">{% block admin_title %}EduSchedule{% endblock %}</h1>
+                <p class="hero-subtitle">{% block admin_subtitle %}Organiza datos academicos y construye horarios consistentes.{% endblock %}</p>
+            </div>
+            <div class="summary-card">
+                <span class="tag"><i class="fa-solid fa-school"></i> {{ institution_name|default:'Institucion Educativa Demo' }}</span>
+                <div class="mt-3">
+                    <h3>Periodo activo</h3>
+                    <strong>{{ year|default:'2026' }} / {{ period|default:'1' }}</strong>
+                    <p>Usa este panel para mantener la informacion base y revisar el estado del horario semanal.</p>
+                </div>
+                <div class="hero-actions mt-3">
+                    <a href="{% url 'admin_dashboard' %}" class="btn btn-soft">Inicio</a>
+                    <a href="{% url 'ver_horarios' %}" class="btn btn-soft">Consultar horarios</a>
+                    <form action="{% url 'logout' %}" method="post" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-brand">Cerrar sesion</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <nav class="subnav">
+        <a href="{% url 'gestionar_estudiantes' %}">Estudiantes</a>
+        <a href="{% url 'gestionar_profesores' %}">Profesores</a>
+        <a href="{% url 'gestionar_aulas' %}">Aulas</a>
+        <a href="{% url 'gestionar_asignaturas' %}">Asignaturas</a>
+        <a href="{% url 'gestionar_grados' %}">Grados</a>
+        <a href="{% url 'gestionar_horas' %}">Horas</a>
+        <a href="{% url 'gestionar_clases' %}">Clases</a>
+        <a href="{% url 'ver_horarios' %}">Ver horarios</a>
+    </nav>
+{% endblock %}

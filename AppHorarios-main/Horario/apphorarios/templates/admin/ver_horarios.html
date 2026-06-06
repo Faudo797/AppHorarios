@@ -1,0 +1,128 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block title %}Consultar horarios | EduSchedule{% endblock %}
+{% block admin_title %}Consulta guiada de horarios{% endblock %}
+{% block admin_subtitle %}Selecciona el tipo de usuario y luego el registro especifico que quieres revisar.{% endblock %}
+
+{% block content %}
+    <div class="card-grid">
+        <section class="panel-card">
+            <h2 class="section-title">Buscar horario</h2>
+            <p class="section-subtitle">{{ message }}</p>
+            <form method="get" id="schedule-search-form">
+                <div class="field-grid">
+                    <div class="field-block">
+                        <label for="user_type">Tipo de usuario</label>
+                        <select class="form-select" id="user_type" name="user_type" onchange="toggleSelectors()">
+                            <option value="">Selecciona una opcion</option>
+                            <option value="profesor" {% if selected_user_type == 'profesor' %}selected{% endif %}>Profesor</option>
+                            <option value="estudiante" {% if selected_user_type == 'estudiante' %}selected{% endif %}>Estudiante</option>
+                            <option value="grado" {% if selected_user_type == 'grado' %}selected{% endif %}>Grado</option>
+                        </select>
+                    </div>
+
+                    <div class="field-block" id="profesor_wrapper">
+                        <label for="profesor_code">Profesor</label>
+                        <select class="form-select" id="profesor_code" name="profesor_code">
+                            <option value="">Selecciona un profesor</option>
+                            {% for profesor in profesores %}
+                                <option value="{{ profesor.codigo_profesor }}">
+                                    {{ profesor.codigo_profesor }} - {{ profesor.primer_nombre }} {{ profesor.primer_apellido }} / {{ profesor.asignatura.nombre }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="field-block" id="estudiante_wrapper">
+                        <label for="estudiante_code">Estudiante</label>
+                        <select class="form-select" id="estudiante_code" name="user_code_estudiante">
+                            <option value="">Selecciona un estudiante</option>
+                            {% for estudiante in estudiantes %}
+                                <option value="{{ estudiante.codigo_estudiante }}">
+                                    {{ estudiante.codigo_estudiante }} - {{ estudiante.primer_nombre }} {{ estudiante.primer_apellido }} / {{ estudiante.grado.nombre }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="field-block" id="grado_wrapper">
+                        <label for="grado_code">Grado</label>
+                        <select class="form-select" id="grado_code" name="user_code_grado">
+                            <option value="">Selecciona un grado</option>
+                            {% for grado in grados %}
+                                <option value="{{ grado.codigo_grado }}">
+                                    {{ grado.codigo_grado }} - {{ grado.nombre }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <input type="hidden" id="final_user_code" name="user_code">
+
+                <div class="hero-actions mt-4">
+                    <button type="submit" class="btn btn-brand">Ver horario</button>
+                    <a href="{% url 'admin_dashboard' %}" class="btn btn-soft">Volver al panel</a>
+                </div>
+            </form>
+        </section>
+
+        <section class="panel-card">
+            <h2 class="section-title">Atajos utiles</h2>
+            <p class="section-subtitle">Usa este modulo para validar rapidamente si la programacion quedo correcta.</p>
+            <div class="d-grid gap-3">
+                <div class="summary-card">
+                    <h3>Para profesores</h3>
+                    <p>Revisa bloques asignados, aula y grado por cada dia de la semana.</p>
+                </div>
+                <div class="summary-card">
+                    <h3>Para estudiantes</h3>
+                    <p>Comprueba asignatura, docente y aula segun el grado al que pertenecen.</p>
+                </div>
+                <div class="summary-card">
+                    <h3>Control de calidad</h3>
+                    <p>Si algo se ve vacio, vuelve a revisar la relacion entre grados, clases y usuarios vinculados.</p>
+                </div>
+            </div>
+        </section>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script>
+        function toggleSelectors() {
+            const type = document.getElementById('user_type').value;
+            const profesorWrapper = document.getElementById('profesor_wrapper');
+            const estudianteWrapper = document.getElementById('estudiante_wrapper');
+            const gradoWrapper = document.getElementById('grado_wrapper');
+
+            profesorWrapper.style.display = type === 'profesor' ? 'block' : 'none';
+            estudianteWrapper.style.display = type === 'estudiante' ? 'block' : 'none';
+            gradoWrapper.style.display = type === 'grado' ? 'block' : 'none';
+        }
+
+        function syncSelectedCode() {
+            const type = document.getElementById('user_type').value;
+            const hiddenInput = document.getElementById('final_user_code');
+            const profesorCode = document.getElementById('profesor_code').value;
+            const estudianteCode = document.getElementById('estudiante_code').value;
+            const gradoCode = document.getElementById('grado_code').value;
+
+            if (type === 'profesor') {
+                hiddenInput.value = profesorCode;
+            } else if (type === 'estudiante') {
+                hiddenInput.value = estudianteCode;
+            } else if (type === 'grado') {
+                hiddenInput.value = gradoCode;
+            } else {
+                hiddenInput.value = '';
+            }
+        }
+
+        document.getElementById('schedule-search-form').addEventListener('submit', function () {
+            syncSelectedCode();
+        });
+
+        document.addEventListener('DOMContentLoaded', toggleSelectors);
+    </script>
+{% endblock %}

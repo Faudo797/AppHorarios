@@ -1,0 +1,22 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block title %}Editar Aula | EduSchedule{% endblock %}
+{% block admin_title %}Editar Aula{% endblock %}
+{% block admin_subtitle %}Modifica la capacidad o nombre de las aulas de clase.{% endblock %}
+
+{% block content %}
+    <div class="card-grid justify-content-center">
+        <section class="panel-card" style="grid-column: 1 / -1; max-width: 700px; margin: 0 auto; width: 100%;">
+            <h2 class="section-title">Editar aula: {{ aula.nombre }}</h2>
+            <p class="section-subtitle">Asegura que la capacidad concuerde con el aforo de estudiantes del grado.</p>
+            <form method="post">
+                {% csrf_token %}
+                {% include 'partials/form_fields.html' with form=form %}
+                <div class="hero-actions mt-4">
+                    <button type="submit" class="btn btn-brand">Guardar cambios</button>
+                    <a href="{% url 'gestionar_aulas' %}" class="btn btn-soft">Cancelar</a>
+                </div>
+            </form>
+        </section>
+    </div>
+{% endblock %}

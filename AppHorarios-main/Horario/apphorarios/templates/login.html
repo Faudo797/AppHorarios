@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block title %}Ingresar | EduSchedule{% endblock %}
+
+{% block topbar %}
+    <section class="hero-card">
+        <div class="top-grid">
+            <div>
+                <div class="eyebrow">Sistema de horarios</div>
+                <h1 class="hero-title">Diseñado para ordenar la jornada escolar</h1>
+                <p class="hero-subtitle">
+                    Accede con tu perfil para consultar el horario o administrar estudiantes, profesores,
+                    aulas y clases desde un solo lugar.
+                </p>
+                <div class="hero-actions mt-4">
+                    <span class="tag"><i class="fa-solid fa-calendar-week"></i> Horarios claros</span>
+                    <span class="tag"><i class="fa-solid fa-user-shield"></i> Roles separados</span>
+                    <span class="tag"><i class="fa-solid fa-layer-group"></i> Datos base consistentes</span>
+                </div>
+            </div>
+            <div class="panel-card">
+                <h2 class="section-title">Iniciar sesion</h2>
+                <p class="section-subtitle">Selecciona tu rol y entra con el usuario asignado por la institucion.</p>
+                <form method="post">
+                    {% csrf_token %}
+                    {% include 'partials/form_fields.html' with form=form %}
+                    <div class="hero-actions mt-4">
+                        <button type="submit" class="btn btn-brand">
+                            <i class="fa-solid fa-right-to-bracket"></i> Entrar al sistema
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </section>
+{% endblock %}

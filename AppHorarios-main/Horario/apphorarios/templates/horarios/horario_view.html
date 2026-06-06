@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+
+{% block title %}Horario | EduSchedule{% endblock %}
+
+{% block topbar %}
+    <section class="hero-card">
+        <div class="top-grid">
+            <div>
+                <div class="eyebrow">{% if admin_view %}Vista administrativa{% else %}Horario personal{% endif %}</div>
+                <h1 class="hero-title">{{ viewed_label }}</h1>
+                <p class="hero-subtitle">
+                    {% if user_rol == 'profesor' %}
+                        Horario docente consultado para el codigo {{ viewed_code }}.
+                    {% elif user_rol == 'estudiante' %}
+                        Horario del estudiante consultado para el codigo {{ viewed_code }}.
+                    {% elif user_rol == 'grado' %}
+                        Horario del grado consultado para el codigo {{ viewed_code }}.
+                    {% endif %}
+                </p>
+                <div class="hero-actions mt-4">
+                    <span class="tag"><i class="fa-solid fa-layer-group"></i> {{ total_clases }} clases</span>
+                    <span class="tag"><i class="fa-solid fa-calendar-day"></i> {{ dias_activos }} dias con actividad</span>
+                    <span class="tag"><i class="fa-solid fa-user-tag"></i> {{ user_rol|title }}</span>
+                </div>
+            </div>
+            <div class="summary-card">
+                <h3>Acciones</h3>
+                <p>Consulta, valida y descarga el horario semanal en formato PDF o Excel.</p>
+                <div class="hero-actions mt-3">
+                    {% if admin_view %}
+                        <a href="{% url 'ver_horarios' %}" class="btn btn-soft">Nueva consulta</a>
+                        <a href="{% url 'admin_dashboard' %}" class="btn btn-soft">Panel admin</a>
+                    {% endif %}
+                    <a href="{% url 'exportar_horario_pdf' %}?user_code={{ viewed_code }}&user_type={{ user_rol }}" class="btn btn-soft"><i class="fa-solid fa-file-pdf"></i> Descargar PDF</a>
+                    <a href="{% url 'exportar_horario_excel' %}?user_code={{ viewed_code }}&user_type={{ user_rol }}" class="btn btn-soft"><i class="fa-solid fa-file-excel"></i> Descargar Excel</a>
+                    <form action="{% url 'logout' %}" method="post" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-brand">Cerrar sesion</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+{% endblock %}
+
+{% block content %}
+    <section class="schedule-card">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+            <div>
+                <h2 class="section-title">Distribucion semanal</h2>
+                <p class="section-subtitle mb-0">Cada tarjeta resume las clases programadas por dia.</p>
+            </div>
+        </div>
+
+        <div class="schedule-grid">
+            {% for dia, clases_del_dia in horario_por_dia.items %}
+                <article class="panel-card">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3 class="section-title mb-0">{{ dia }}</h3>
+                        <span class="tag">{{ clases_del_dia|length }} bloque{{ clases_del_dia|length|pluralize }}</span>
+                    </div>
+
+                    {% if clases_del_dia %}
+                        <div class="d-grid gap-3">
+                            {% for clase in clases_del_dia %}
+                                <div class="schedule-item">
+                                    <span class="schedule-meta"><i class="fa-regular fa-clock"></i> {{ clase.hora }}</span>
+                                    <h4 class="mt-3">{{ clase.titulo }}</h4>
+                                    <p class="mb-1"><strong>{% if user_rol == 'profesor' %}Grado{% else %}Profesor{% endif %}:</strong> {{ clase.detalle_principal }}</p>
+                                    <p class="mb-1"><strong>{% if user_rol == 'profesor' %}Asignatura{% else %}Detalle{% endif %}:</strong> {{ clase.detalle_secundario }}</p>
+                                    <small><strong>Aula:</strong> {{ clase.aula }}</small>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="empty-state">Sin clases programadas para este dia.</div>
+                    {% endif %}
+                </article>
+            {% endfor %}
+        </div>
+    </section>
+{% endblock %}
