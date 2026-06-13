@@ -1,0 +1,756 @@
+{% extends 'admin/layout_asc.html' %}
+
+{% block extra_css %}
+<style>
+    .spec-container {
+        padding: 2rem;
+    }
+    .spec-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+    .spec-title {
+        font-size: 1.5rem;
+        font-weight: 400;
+        margin: 0;
+    }
+    .section-content {
+        display: none;
+    }
+    .section-content.active {
+        display: block;
+    }
+    .color-preview {
+        width: 24px;
+        height: 24px;
+        border-radius: 4px;
+        display: inline-block;
+        vertical-align: middle;
+        border: 1px solid var(--asc-border);
+    }
+    /* Toolbar */
+    .toolbar {
+        background-color: #F3F2F1;
+        padding: 0.5rem;
+        display: flex;
+        gap: 0.5rem;
+        border: 1px solid var(--asc-border);
+        border-bottom: none;
+    }
+    .toolbar-btn.secondary {
+        background-color: white;
+        color: var(--asc-text);
+        border: 1px solid var(--asc-border);
+    }
+    .toolbar-btn.secondary:hover {
+        background-color: #E1DFDD;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="specApp" class="spec-container">
+    
+    <!-- Header General -->
+    <div class="spec-header">
+        <h2 class="spec-title">Especificación: [[ currentSectionTitle ]]</h2>
+    </div>
+
+    <!-- Colegio -->
+    <div id="colegio" class="section-content" :class="{ active: currentSection === 'colegio' }">
+        <div class="row">
+            <div class="col-md-6">
+                <h4 class="mb-3">Datos del Colegio</h4>
+                <div class="card p-3 mb-4 shadow-sm" style="border:1px solid var(--asc-border);">
+                    <div class="mb-3">
+                        <label>Nombre de la Institución:</label>
+                        <input type="text" class="form-control" v-model="colegioConfig.nombre">
+                    </div>
+                    <div class="mb-3">
+                        <label>Año Lectivo:</label>
+                        <input type="text" class="form-control" v-model="colegioConfig.anio_lectivo">
+                    </div>
+                    <div class="mb-3">
+                        <label>Periodo (Ej. Semestre 1):</label>
+                        <input type="text" class="form-control" v-model="colegioConfig.periodo">
+                    </div>
+                    <button class="btn btn-primary" @click="guardarColegioConfig">Guardar Datos del Colegio</button>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <h4 class="mb-3">Campanario (Horas de Clase)</h4>
+                <div class="toolbar mb-2">
+                    <button class="toolbar-btn" @click="abrirModalHora()"><i class="fa-solid fa-plus"></i> Nueva Hora</button>
+                    <button class="toolbar-btn secondary" @click="cargarDatos()"><i class="fa-solid fa-rotate-right"></i> Actualizar</button>
+                </div>
+                <table class="asc-table shadow-sm">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Inicio</th>
+                            <th>Fin</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="hora in horas" :key="hora.id">
+                            <td>[[ hora.id ]]</td>
+                            <td>[[ hora.hora_inicio ]]</td>
+                            <td>[[ hora.hora_fin ]]</td>
+                            <td class="action-icons">
+                                <i class="fa-solid fa-pen action-icon" @click="abrirModalHora(hora)"></i>
+                                <i class="fa-solid fa-trash action-icon delete" @click="eliminarHora(hora.id)"></i>
+                            </td>
+                        </tr>
+                        <tr v-if="horas.length === 0">
+                            <td colspan="4" style="text-align:center; color:#605E5C;">No hay horas configuradas.</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p class="text-muted mt-2" style="font-size:0.85rem;"><i class="fa-solid fa-circle-info"></i> Nota: El sistema detectará automáticamente un Recreo si hay una diferencia de 15 minutos o más entre el fin de una hora y el inicio de la siguiente.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Asignaturas -->
+    <div id="asignaturas" class="section-content" :class="{ active: currentSection === 'asignaturas' }">
+        <div class="toolbar">
+            <button class="toolbar-btn" @click="abrirModalAsignatura()"><i class="fa-solid fa-plus"></i> Nueva</button>
+            <button class="toolbar-btn secondary" @click="cargarDatos()"><i class="fa-solid fa-rotate-right"></i> Actualizar</button>
+        </div>
+        <table class="asc-table">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Abreviatura</th>
+                    <th>Color</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="asig in asignaturas" :key="asig.id">
+                    <td>[[ asig.nombre ]]</td>
+                    <td>[[ asig.abreviatura ]]</td>
+                    <td>
+                        <div class="color-preview" :style="{ backgroundColor: asig.color }"></div>
+                    </td>
+                    <td class="action-icons">
+                        <i class="fa-solid fa-pen action-icon" @click="abrirModalAsignatura(asig)"></i>
+                        <i class="fa-solid fa-trash action-icon delete" @click="eliminarAsignatura(asig.id)"></i>
+                    </td>
+                </tr>
+                <tr v-if="asignaturas.length === 0">
+                    <td colspan="4" style="text-align:center; color:#605E5C;">No hay asignaturas registradas.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Profesores -->
+    <div id="profesores" class="section-content" :class="{ active: currentSection === 'profesores' }">
+        <div class="toolbar">
+            <button class="toolbar-btn" @click="abrirModalProfesor()"><i class="fa-solid fa-plus"></i> Nuevo</button>
+            <button class="toolbar-btn secondary" @click="cargarDatos()"><i class="fa-solid fa-rotate-right"></i> Actualizar</button>
+        </div>
+        <table class="asc-table">
+            <thead>
+                <tr>
+                    <th>Abreviatura</th>
+                    <th>Nombre Completo</th>
+                    <th>Asignaturas (Especialidad)</th>
+                    <th>Identificación</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="prof in profesores" :key="prof.id">
+                    <td><strong>[[ prof.abreviatura ]]</strong></td>
+                    <td>[[ prof.primer_nombre ]] [[ prof.primer_apellido ]]</td>
+                    <td><span class="badge bg-info text-dark">[[ prof.asignaturas_str || 'Sin especialidad' ]]</span></td>
+                    <td>[[ prof.identificacion ]]</td>
+                    <td class="action-icons">
+                        <i class="fa-solid fa-pen action-icon" @click="abrirModalProfesor(prof)"></i>
+                        <i class="fa-solid fa-trash action-icon delete" @click="eliminarProfesor(prof.id)"></i>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Fichas (Lecciones) -->
+    <div id="lecciones" class="section-content" :class="{ active: currentSection === 'lecciones' }">
+        <div class="toolbar">
+            <button class="toolbar-btn" @click="abrirModalFicha()"><i class="fa-solid fa-plus"></i> Nueva Lección</button>
+            <button class="toolbar-btn secondary" @click="cargarDatos()"><i class="fa-solid fa-rotate-right"></i> Actualizar</button>
+        </div>
+        <table class="asc-table">
+            <thead>
+                <tr>
+                    <th>Profesor</th>
+                    <th>Asignatura</th>
+                    <th>Grado</th>
+                    <th>Horas Semanales</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="ficha in fichas" :key="ficha.id">
+                    <td>[[ ficha.profesor__primer_nombre ]]</td>
+                    <td><span :style="{ color: ficha.asignatura__color, fontWeight: 'bold' }">[[ ficha.asignatura__nombre ]]</span></td>
+                    <td>[[ ficha.grado__nombre ]]</td>
+                    <td>[[ ficha.horas_totales ]]</td>
+                    <td class="action-icons">
+                        <i class="fa-solid fa-trash action-icon delete" @click="eliminarFicha(ficha.id)"></i>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Clases (Grados) -->
+    <div id="grados" class="section-content" :class="{ active: currentSection === 'grados' }">
+        <div class="toolbar">
+            <button class="toolbar-btn" @click="abrirModalClase()"><i class="fa-solid fa-plus"></i> Nueva Clase</button>
+            <button class="toolbar-btn secondary" @click="cargarDatos()"><i class="fa-solid fa-rotate-right"></i> Actualizar</button>
+        </div>
+        <table class="asc-table">
+            <thead>
+                <tr>
+                    <th>Nombre de la Clase</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="clase in grados" :key="clase.id">
+                    <td><strong>[[ clase.nombre ]]</strong></td>
+                    <td class="action-icons">
+                        <i class="fa-solid fa-pen action-icon" @click="abrirModalClase(clase)"></i>
+                        <i class="fa-solid fa-trash action-icon delete"></i>
+                    </td>
+                </tr>
+                <tr v-if="grados.length === 0">
+                    <td colspan="2" style="text-align:center; color:#605E5C;">No hay clases registradas.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Aulas -->
+    <div id="aulas" class="section-content" :class="{ active: currentSection === 'aulas' }">
+        <div class="toolbar">
+            <button class="toolbar-btn" @click="abrirModalAula()"><i class="fa-solid fa-plus"></i> Nueva Aula</button>
+            <button class="toolbar-btn secondary" @click="cargarDatos()"><i class="fa-solid fa-rotate-right"></i> Actualizar</button>
+        </div>
+        <table class="asc-table">
+            <thead>
+                <tr>
+                    <th>Abreviatura</th>
+                    <th>Nombre</th>
+                    <th>Capacidad</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="aula in aulas" :key="aula.id">
+                    <td><strong>[[ aula.abreviatura ]]</strong></td>
+                    <td>[[ aula.nombre ]]</td>
+                    <td>[[ aula.capacidad || 'N/A' ]]</td>
+                    <td class="action-icons">
+                        <i class="fa-solid fa-pen action-icon" @click="abrirModalAula(aula)"></i>
+                        <i class="fa-solid fa-trash action-icon delete"></i>
+                    </td>
+                </tr>
+                <tr v-if="aulas.length === 0">
+                    <td colspan="4" style="text-align:center; color:#605E5C;">No hay aulas registradas.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- MODALES -->
+    <!-- Modal Asignatura -->
+    <!-- Modal Hora -->
+    <div class="modal-overlay" v-if="showModalHora">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3>[[ modalHora.id ? 'Editar' : 'Nueva' ]] Hora</h3>
+                <button class="modal-close" @click="cerrarModalHora()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Hora Inicio</label>
+                    <input type="time" class="form-control" v-model="modalHora.hora_inicio">
+                </div>
+                <div class="form-group">
+                    <label>Hora Fin</label>
+                    <input type="time" class="form-control" v-model="modalHora.hora_fin">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @click="cerrarModalHora()">Cancelar</button>
+                <button class="toolbar-btn" @click="guardarHora()">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" v-if="modales.asignatura">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3>[[ formData.id ? 'Editar' : 'Nueva' ]] Asignatura</h3>
+                <button class="modal-close" @click="cerrarModal('asignatura')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Nombre Completo</label>
+                    <input type="text" class="form-control" v-model="formData.nombre" @input="autogenerarCodigo">
+                </div>
+                <div class="form-group">
+                    <label>Código (Automático)</label>
+                    <input type="text" class="form-control" v-model="formData.codigo_asignatura" readonly style="background-color: #f3f2f1; cursor: not-allowed;">
+                </div>
+                <div class="form-group">
+                    <label>Abreviatura</label>
+                    <input type="text" class="form-control" v-model="formData.abreviatura">
+                </div>
+                <div class="form-group">
+                    <label>Color representativo</label>
+                    <input type="color" class="form-control" style="height:40px; padding:2px;" v-model="formData.color">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @click="cerrarModal('asignatura')">Cancelar</button>
+                <button class="toolbar-btn" @click="guardarAsignatura()">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Profesor -->
+    <div class="modal-overlay" v-if="modales.profesor">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3>[[ formData.id ? 'Editar' : 'Nuevo' ]] Profesor</h3>
+                <button class="modal-close" @click="cerrarModal('profesor')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Código/ID Profesor (Automático)</label>
+                    <input type="text" class="form-control" v-model="formData.codigo_profesor" readonly style="background-color: #f3f2f1; cursor: not-allowed;">
+                </div>
+                <div class="form-group">
+                    <label>Cédula/Identificación</label>
+                    <input type="text" class="form-control" v-model="formData.identificacion" @input="autogenerarCodigoProfesor">
+                </div>
+                <div class="form-group">
+                    <label>Primer Nombre</label>
+                    <input type="text" class="form-control" v-model="formData.primer_nombre">
+                </div>
+                <div class="form-group">
+                    <label>Primer Apellido</label>
+                    <input type="text" class="form-control" v-model="formData.primer_apellido">
+                </div>
+                <div class="form-group">
+                    <label>Abreviatura (Ej: JP)</label>
+                    <input type="text" class="form-control" v-model="formData.abreviatura">
+                </div>
+                <div class="form-group">
+                    <label>Especialidades (Asignaturas)</label>
+                    <select multiple class="form-control" v-model="formData.asignaturas" style="height: 100px;">
+                        <option v-for="asig in asignaturas" :value="asig.id" :key="asig.id">[[ asig.nombre ]]</option>
+                    </select>
+                    <small style="color:gray;">Mantén presionada la tecla Ctrl (Windows) o Command (Mac) para seleccionar varias.</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @click="cerrarModal('profesor')">Cancelar</button>
+                <button class="toolbar-btn" @click="guardarProfesor()">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Clase (Grado) -->
+    <div class="modal-overlay" v-if="modales.clase">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3>[[ formData.id ? 'Editar' : 'Nueva' ]] Clase</h3>
+                <button class="modal-close" @click="cerrarModal('clase')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Nombre de la Clase</label>
+                    <input type="text" class="form-control" v-model="formData.nombre" @input="autogenerarCodigoGrado">
+                </div>
+                <div class="form-group">
+                    <label>Código de Grado (Automático)</label>
+                    <input type="text" class="form-control" v-model="formData.codigo_grado" readonly style="background-color: #f3f2f1; cursor: not-allowed;">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @click="cerrarModal('clase')">Cancelar</button>
+                <button class="toolbar-btn" @click="guardarClase()">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Aula -->
+    <div class="modal-overlay" v-if="modales.aula">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3>[[ formData.id ? 'Editar' : 'Nueva' ]] Aula</h3>
+                <button class="modal-close" @click="cerrarModal('aula')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Abreviatura</label>
+                    <input type="text" class="form-control" v-model="formData.abreviatura">
+                </div>
+                <div class="form-group">
+                    <label>Nombre del Aula</label>
+                    <input type="text" class="form-control" v-model="formData.nombre">
+                </div>
+                <div class="form-group">
+                    <label>Capacidad</label>
+                    <input type="number" class="form-control" v-model="formData.capacidad">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @click="cerrarModal('aula')">Cancelar</button>
+                <button class="toolbar-btn" @click="guardarAula()">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Ficha -->
+    <div class="modal-overlay" v-if="modales.ficha">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3>[[ formData.id ? 'Editar' : 'Nueva' ]] Lección (Ficha)</h3>
+                <button class="modal-close" @click="cerrarModal('ficha')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Profesor</label>
+                    <select class="form-control" v-model="formData.profesor_id">
+                        <option v-for="prof in profesores" :value="prof.id" :key="prof.id">[[ prof.primer_nombre ]] [[ prof.primer_apellido ]]</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Asignatura</label>
+                    <select class="form-control" v-model="formData.asignatura_id">
+                        <option v-for="asig in asignaturas" :value="asig.id" :key="asig.id">[[ asig.nombre ]]</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Grado/Clase</label>
+                    <select class="form-control" v-model="formData.grado_id">
+                        <option v-for="g in grados" :value="g.id" :key="g.id">[[ g.nombre ]]</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Horas Semanales Totales</label>
+                    <input type="number" class="form-control" v-model="formData.horas_totales" min="1" max="10">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @click="cerrarModal('ficha')">Cancelar</button>
+                <button class="toolbar-btn" @click="guardarFicha()">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const { createApp } = Vue;
+
+    createApp({
+        delimiters: ['[[', ']]'],
+        data() {
+            return {
+                horas: [],
+                colegioConfig: {
+                    nombre: '',
+                    anio_lectivo: '',
+                    periodo: ''
+                },
+                currentSection: 'colegio',
+                currentSectionTitle: 'Colegio',
+                loading: true,
+                asignaturas: [],
+                profesores: [],
+                fichas: [],
+                grados: [],
+                showModalGrado: false,
+                modalAula: { id: null, nombre: '', abreviatura: '', capacidad: 30 },
+                showModalAula: false,
+                modalHora: { id: null, hora_inicio: '', hora_fin: '' },
+                showModalHora: false,
+                aulas: [],
+                modales: {
+                    asignatura: false,
+                    profesor: false,
+                    ficha: false,
+                    clase: false,
+                    aula: false
+                },
+                formData: {}
+            }
+        },
+        mounted() {
+            this.checkHash();
+            window.addEventListener('hashchange', () => this.checkHash());
+            this.cargarDatos();
+        },
+        methods: {
+            checkHash() {
+                const hash = window.location.hash.substring(1) || 'colegio';
+                this.currentSection = hash;
+                
+                // Actualizar Sidebar UI
+                document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+                const activeLink = document.getElementById('nav-' + hash);
+                if (activeLink) {
+                    activeLink.classList.add('active');
+                    this.currentSectionTitle = activeLink.textContent.trim().substring(3);
+                } else if (hash === 'colegio') {
+                    this.currentSectionTitle = 'Colegio';
+                }
+            },
+            async cargarDatos() {
+                try {
+                    const res = await axios.get('/api/fichas/data/');
+                    this.asignaturas = res.data.asignaturas;
+                    this.profesores = res.data.profesores;
+                    this.grados = res.data.grados;
+                    this.aulas = res.data.aulas;
+                    // También cargamos las horas
+                    const resHoras = await axios.get('/api/horario/individual/?tipo=grado&id=0'); // truco para obtener horas
+                    this.horas = resHoras.data.estructura.filter(h => h.tipo === 'hora').map(h => ({
+                        id: h.id, 
+                        // asumiendo que el inicio de horas viene en 12h, necesitamos cargarlo real
+                        hora_inicio: h.inicio,
+                        hora_fin: h.fin
+                    }));
+                } catch (error) {
+                    console.error("Error al cargar datos:", error);
+                }
+                
+                // Cargar Colegio
+                try {
+                    const resCol = await axios.get('/api/configuracion/');
+                    this.colegioConfig = resCol.data;
+                } catch(e) {}
+            },
+            abrirModalAsignatura(asig) {
+                if(asig && asig.id) {
+                    this.formData = { ...asig };
+                } else {
+                    this.formData = { id: null, codigo_asignatura: '', nombre: '', abreviatura: '', color: '#4f46e5' };
+                }
+                this.modales.asignatura = true;
+                if(!this.modales.asignatura) alert("Error: modales.asignatura no se pudo cambiar");
+            },
+            cerrarModalAula() {
+                this.showModalAula = false;
+            },
+            
+            // ================== HORA ==================
+            abrirModalHora(hora = null) {
+                if (hora) {
+                    this.modalHora = { ...hora };
+                } else {
+                    this.modalHora = { id: null, hora_inicio: '', hora_fin: '' };
+                }
+                this.showModalHora = true;
+            },
+            cerrarModalHora() {
+                this.showModalHora = false;
+            },
+            async guardarHora() {
+                try {
+                    const res = await axios.post('/api/horas/guardar/', this.modalHora);
+                    if (res.data.success) {
+                        this.cerrarModalHora();
+                        window.location.reload(); // Recargar completo para refrescar las horas en formato 24h
+                    }
+                } catch (error) {
+                    alert("Error al guardar la hora");
+                }
+            },
+            async eliminarHora(id) {
+                if (confirm("¿Estás seguro de eliminar esta hora? Afectará todas las asignaciones existentes en esa hora.")) {
+                    try {
+                        const res = await axios.delete(`/api/horas/eliminar/${id}/`);
+                        if (res.data.success) {
+                            window.location.reload();
+                        }
+                    } catch (error) {
+                        alert("Error al eliminar");
+                    }
+                }
+            },
+            
+            // ================== COLEGIO ==================
+            async guardarColegioConfig() {
+                try {
+                    const res = await axios.post('/api/configuracion/', this.colegioConfig);
+                    if (res.data.success) {
+                        alert("Datos del colegio guardados correctamente.");
+                        window.location.reload();
+                    }
+                } catch (error) {
+                    alert("Error al guardar datos del colegio");
+                }
+            },
+            cerrarModal(tipo) {
+                this.modales[tipo] = false;
+            },
+            async guardarAsignatura() {
+                try {
+                    const res = await axios.post('/api/asignaturas/guardar/', this.formData);
+                    if(res.data.success) {
+                        this.cerrarModal('asignatura');
+                        this.cargarDatos();
+                    } else {
+                        alert("Error del servidor: " + res.data.error);
+                    }
+                } catch(e) { 
+                    alert("Error guardando asignatura: " + (e.response ? e.response.data.error : e.message)); 
+                }
+            },
+            abrirModalProfesor(profesor) {
+                if(profesor && profesor.id) {
+                    this.formData = { ...profesor, asignaturas: profesor.asignaturas_str ? profesor.asignaturas_str.split(', ') : [] };
+                    // Map string names to IDs (simplified: needs actual ID mapping from list if possible, but let's assume we store IDs or need to fetch them)
+                    // Better approach: ensure backend sends asignaturas as list of IDs. For now, since we only added it as str, let's just clear it if editing to avoid complex mapping in UI
+                    this.formData.asignaturas = []; 
+                } else {
+                    this.formData = { id: null, codigo_profesor: '', identificacion: '', primer_nombre: '', primer_apellido: '', abreviatura: '', asignaturas: [] };
+                }
+                this.modales.profesor = true;
+            },
+            async guardarProfesor() {
+                try {
+                    await axios.post('/api/profesores/guardar/', this.formData);
+                    this.cerrarModal('profesor');
+                    this.cargarDatos();
+                } catch(e) { alert("Error guardando profesor"); }
+            },
+            async eliminarProfesor(id) {
+                if(confirm("¿Seguro que deseas eliminar este profesor?")) {
+                    try {
+                        await axios.delete(`/api/profesores/eliminar/${id}/`);
+                        this.cargarDatos();
+                    } catch(e) { alert("Error al eliminar"); }
+                }
+            },
+            abrirModalClase(clase) {
+                if(clase && clase.id) {
+                    this.formData = { ...clase };
+                } else {
+                    this.formData = { id: null, codigo_grado: '', nombre: '' };
+                }
+                this.modales.clase = true;
+            },
+            async guardarClase() {
+                try {
+                    await axios.post('/api/grados/guardar/', this.formData);
+                    this.cerrarModal('clase');
+                    this.cargarDatos();
+                } catch(e) { alert("Error guardando clase"); }
+            },
+            async eliminarClase(id) {
+                if(confirm("¿Seguro que deseas eliminar esta clase?")) {
+                    try {
+                        await axios.delete(`/api/grados/eliminar/${id}/`);
+                        this.cargarDatos();
+                    } catch(e) { alert("Error al eliminar"); }
+                }
+            },
+            abrirModalAula(aula) {
+                if(aula && aula.id) {
+                    this.formData = { ...aula };
+                } else {
+                    this.formData = { id: null, abreviatura: '', nombre: '', capacidad: 30 };
+                }
+                this.modales.aula = true;
+            },
+            async guardarAula() {
+                try {
+                    await axios.post('/api/aulas/guardar/', this.formData);
+                    this.cerrarModal('aula');
+                    this.cargarDatos();
+                } catch(e) { alert("Error guardando aula"); }
+            },
+            async eliminarAula(id) {
+                if(confirm("¿Seguro que deseas eliminar esta aula?")) {
+                    try {
+                        await axios.delete(`/api/aulas/eliminar/${id}/`);
+                        this.cargarDatos();
+                    } catch(e) { alert("Error al eliminar"); }
+                }
+            },
+            abrirModalFicha(ficha) {
+                if(ficha && ficha.id) {
+                    this.formData = { ...ficha };
+                } else {
+                    this.formData = { id: null, profesor_id: null, asignatura_id: null, grado_id: null, horas_totales: 1 };
+                }
+                this.modales.ficha = true;
+            },
+            async guardarFicha() {
+                try {
+                    await axios.post('/api/fichas/guardar/', this.formData);
+                    this.cerrarModal('ficha');
+                    this.cargarDatos();
+                } catch(e) { alert("Error guardando ficha"); }
+            },
+            async eliminarFicha(id) {
+                if(confirm("¿Seguro que deseas eliminar esta lección?")) {
+                    try {
+                        await axios.delete(`/api/fichas/eliminar/${id}/`);
+                        this.cargarDatos();
+                    } catch(e) { alert("Error al eliminar"); }
+                }
+            },
+            autogenerarCodigo() {
+                if (this.formData.nombre && !this.formData.id) {
+                    // Tomar las primeras 3 letras
+                    let cleanName = this.formData.nombre.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+                    let code = cleanName.replace(/[^A-Z]/g, '').substring(0, 3);
+                    this.formData.codigo_asignatura = code;
+                    
+                    // Abreviatura por defecto igual al código
+                    if (!this.formData.abreviatura) {
+                        this.formData.abreviatura = code;
+                    }
+                }
+            },
+            autogenerarCodigoProfesor() {
+                if (this.formData.identificacion && !this.formData.id) {
+                    this.formData.codigo_profesor = "PRO-" + this.formData.identificacion;
+                }
+            },
+            autogenerarCodigoGrado() {
+                if (this.formData.nombre && !this.formData.id) {
+                    let cleanName = this.formData.nombre.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/[^A-Z0-9]/g, '');
+                    this.formData.codigo_grado = "GRA-" + cleanName;
+                }
+            },
+            async eliminarAsignatura(id) {
+                if(confirm("¿Seguro que deseas eliminar esta asignatura?")) {
+                    try {
+                        await axios.delete(`/api/asignaturas/eliminar/${id}/`);
+                        this.cargarDatos();
+                    } catch(e) { alert("Error al eliminar"); }
+                }
+            }
+        }
+    }).mount('#specApp');
+</script>
+{% endblock %}

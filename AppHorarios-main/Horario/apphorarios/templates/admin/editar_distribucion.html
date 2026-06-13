@@ -1,0 +1,22 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block title %}Editar Distribución Horaria | EduSchedule{% endblock %}
+{% block admin_title %}Editar Distribución Horaria{% endblock %}
+{% block admin_subtitle %}Modifica los datos de la distribución horaria seleccionada.{% endblock %}
+
+{% block content %}
+    <div class="card-grid justify-content-center">
+        <section class="panel-card" style="grid-column: 1 / -1; max-width: 700px; margin: 0 auto; width: 100%;">
+            <h2 class="section-title">Editar distribución: {{ distribucion.nombre }}</h2>
+            <p class="section-subtitle">Actualiza el tipo y descripción de la distribución.</p>
+            <form method="post">
+                {% csrf_token %}
+                {% include 'partials/form_fields.html' with form=form %}
+                <div class="hero-actions mt-4">
+                    <button type="submit" class="btn btn-brand">Guardar cambios</button>
+                    <a href="{% url 'gestionar_distribuciones' %}" class="btn btn-soft">Cancelar</a>
+                </div>
+            </form>
+        </section>
+    </div>
+{% endblock %}

@@ -1,4 +1,3 @@
-from django.core.exceptions import ValidationError
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.conf import settings  # Para usar AUTH_USER_MODEL
@@ -28,18 +27,16 @@ class Administrador(models.Model):
 
 class Asignatura(models.Model):
     codigo_asignatura = models.CharField(max_length=10, unique=True)
-    nombre = models.CharField(max_length=100, default='Sin nombre')
+    nombre = models.CharField(max_length=100, default='Sin nombre', unique=True)
+    abreviatura = models.CharField(max_length=10, default='', blank=True, unique=True)
+    color = models.CharField(max_length=7, default='#FFFFFF', help_text="Color en formato HEX (ej. #FF5733)")
 
     def __str__(self):
-        return f"{self.codigo_asignatura} - {self.nombre}"
+        return self.nombre
 
 class Hora(models.Model):
     hora_inicio = models.TimeField()
     hora_fin = models.TimeField()
-
-    def clean(self):
-        if self.hora_inicio and self.hora_fin and self.hora_inicio >= self.hora_fin:
-            raise ValidationError({'hora_fin': 'La hora de fin debe ser posterior a la hora de inicio.'})
 
     def __str__(self):
         return f"{self.hora_inicio.strftime('%H:%M')} - {self.hora_fin.strftime('%H:%M')}"
@@ -48,15 +45,17 @@ class Hora(models.Model):
 
 class Grado(models.Model):
     codigo_grado = models.CharField(max_length=10, unique=True)
-    nombre = models.CharField(max_length=100)  # Sin choices, para que sea libre
+    nombre = models.CharField(max_length=100, unique=True)  # Sin choices, para que sea libre
+    aula_base = models.ForeignKey('Aula', on_delete=models.SET_NULL, null=True, blank=True, related_name='grados_base', help_text="Aula principal para este grado")
 
     def __str__(self):
-        return f"{self.codigo_grado} - {self.nombre}"
+        return self.nombre
 
 
 
 class Aula(models.Model):
-    nombre = models.CharField(max_length=50)  # este es el 'nombre' del formulario
+    nombre = models.CharField(max_length=50, unique=True)  # este es el 'nombre' del formulario
+    abreviatura = models.CharField(max_length=10, blank=True, default='', unique=True)
     capacidad = models.IntegerField(default=30)  # capacidad máxima predeterminada
 
     def __str__(self):
@@ -66,7 +65,7 @@ class Aula(models.Model):
 
 class Estudiante(models.Model):
     codigo_estudiante = models.CharField(max_length=10, unique=True)
-    identificacion = models.CharField(max_length=20)
+    identificacion = models.CharField(max_length=20, unique=True)
     primer_nombre = models.CharField(max_length=100, default='Nombre')
     segundo_nombre = models.CharField(max_length=100, blank=True, null=True)
     primer_apellido = models.CharField(max_length=100, default='Apellido')
@@ -75,31 +74,24 @@ class Estudiante(models.Model):
     usuario = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True, related_name='estudiante_perfil')
 
     def __str__(self):
-        return f"{self.codigo_estudiante} - {self.primer_nombre} {self.primer_apellido}"
+        return f"{self.primer_nombre} {self.primer_apellido}"
 
 
 class Profesor(models.Model):
     codigo_profesor = models.CharField(max_length=10, unique=True)
-    identificacion = models.CharField(max_length=20)
+    identificacion = models.CharField(max_length=20, unique=True)
     primer_nombre = models.CharField(max_length=100, default='Nombre')
     segundo_nombre = models.CharField(max_length=100, blank=True, null=True)
     primer_apellido = models.CharField(max_length=100, default='Apellido')
     segundo_apellido = models.CharField(max_length=100, blank=True, null=True)
-    asignatura = models.ForeignKey('Asignatura', on_delete=models.CASCADE, related_name='profesores')
-    grados = models.ManyToManyField('Grado', related_name='profesores', blank=True)
+    abreviatura = models.CharField(max_length=10, default='', blank=True, help_text="Ej. JP para Juan Pérez")
+    asignaturas = models.ManyToManyField('Asignatura', related_name='profesores', blank=True)
     usuario = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True, related_name='profesor_perfil')
 
     def __str__(self):
-        return f"{self.codigo_profesor} - {self.primer_nombre} {self.primer_apellido}"
+        return f"{self.primer_nombre} {self.primer_apellido}"
 
-
-
-class Clase(models.Model):
-    descripcion_clase = models.CharField(max_length=100, default='Clase sin descripción')
-    profesor = models.ForeignKey(Profesor, on_delete=models.CASCADE, related_name='clases')
-    aula = models.ForeignKey(Aula, on_delete=models.CASCADE, related_name='clases')
-    hora = models.ForeignKey(Hora, on_delete=models.CASCADE, related_name='clases')
-
+class DisponibilidadProfesor(models.Model):
     DIAS_SEMANA = [
         ('LU', 'Lunes'),
         ('MA', 'Martes'),
@@ -107,36 +99,61 @@ class Clase(models.Model):
         ('JU', 'Jueves'),
         ('VI', 'Viernes'),
     ]
-    dia = models.CharField(max_length=2, choices=DIAS_SEMANA, default='LU')
+    profesor = models.ForeignKey(Profesor, on_delete=models.CASCADE, related_name='disponibilidades')
+    dia = models.CharField(max_length=2, choices=DIAS_SEMANA)
+    hora = models.ForeignKey('Hora', on_delete=models.CASCADE)
+    disponible = models.BooleanField(default=True)
 
-    grado = models.ForeignKey(Grado, on_delete=models.CASCADE, related_name='clases')
-
-    def estudiantes_asociados(self):
-        return self.grado.estudiantes.all()
-
-    def clean(self):
-        if not all([self.profesor_id, self.aula_id, self.hora_id, self.grado_id, self.dia]):
-            return
-
-        conflictos = Clase.objects.exclude(pk=self.pk)
-
-        if conflictos.filter(aula=self.aula, hora=self.hora, dia=self.dia).exists():
-            raise ValidationError({'aula': 'Ya existe una clase programada en esta aula para ese dia y hora.'})
-
-        if conflictos.filter(profesor=self.profesor, hora=self.hora, dia=self.dia).exists():
-            raise ValidationError({'profesor': 'El profesor ya tiene una clase asignada para ese dia y hora.'})
-
-        if conflictos.filter(grado=self.grado, hora=self.hora, dia=self.dia).exists():
-            raise ValidationError({'grado': 'El grado ya tiene una clase programada para ese dia y hora.'})
-
-        if self.profesor.grados.exists() and not self.profesor.grados.filter(pk=self.grado_id).exists():
-            raise ValidationError({'grado': 'El profesor seleccionado no esta asociado a este grado.'})
+    class Meta:
+        unique_together = ['profesor', 'dia', 'hora']
 
     def __str__(self):
-        return f"{self.descripcion_clase} - {self.get_dia_display()} - {self.hora} - {self.grado}"
+        estado = "Disponible" if self.disponible else "No Disponible"
+        return f"{self.profesor} - {self.get_dia_display()} {self.hora}: {estado}"
+
+
+
+class Ficha(models.Model):
+    descripcion_ficha = models.CharField(max_length=100, default='Ficha sin descripción')
+    profesor = models.ForeignKey(Profesor, on_delete=models.CASCADE, related_name='fichas')
+    asignatura = models.ForeignKey(Asignatura, on_delete=models.CASCADE, related_name='fichas')
+    grado = models.ForeignKey(Grado, on_delete=models.CASCADE, related_name='fichas')
+    horas_totales = models.IntegerField(default=1, help_text="Cantidad de horas a la semana")
+
+    def __str__(self):
+        return f"{self.asignatura.abreviatura or self.asignatura.nombre} - {self.profesor.abreviatura or self.profesor.primer_nombre} ({self.grado.nombre})"
+
+class FichaAsignada(models.Model):
+    DIAS_SEMANA = [
+        ('LU', 'Lunes'),
+        ('MA', 'Martes'),
+        ('MI', 'Miércoles'),
+        ('JU', 'Jueves'),
+        ('VI', 'Viernes'),
+    ]
+    ficha = models.ForeignKey(Ficha, on_delete=models.CASCADE, related_name='asignaciones')
+    dia = models.CharField(max_length=2, choices=DIAS_SEMANA, default='LU')
+    hora = models.ForeignKey(Hora, on_delete=models.CASCADE, related_name='fichas_asignadas')
+    aula = models.ForeignKey(Aula, on_delete=models.CASCADE, related_name='fichas_asignadas')
 
     class Meta:
         unique_together = [
             ('aula', 'hora', 'dia'),
-            ('profesor', 'hora', 'dia'),
         ]
+
+    def __str__(self):
+        return f"{self.ficha} -> {self.dia} {self.hora}"
+
+class ConfiguracionColegio(models.Model):
+    nombre = models.CharField(max_length=200, default='Institución Educativa Demo')
+    anio_lectivo = models.CharField(max_length=20, default='2026')
+    periodo = models.CharField(max_length=50, default='Semestre 1')
+
+    def __str__(self):
+        return f"{self.nombre} - {self.anio_lectivo}"
+
+    @classmethod
+    def get_config(cls):
+        config, created = cls.objects.get_or_create(id=1)
+        return config
+

@@ -8,7 +8,8 @@ from .models import (
     Aula,
     Estudiante,
     Profesor,
-    Clase,
+    Ficha,
+    FichaAsignada,
     Asignatura,
     Hora,
     Grado
@@ -116,7 +117,8 @@ class ProfesorAdmin(admin.ModelAdmin):
 # Resto de modelos
 # ======================
 admin.site.register(Aula)
-admin.site.register(Clase)
+admin.site.register(Ficha)
+admin.site.register(FichaAsignada)
 admin.site.register(Asignatura)
 admin.site.register(Hora)
 admin.site.register(Grado)

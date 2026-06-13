@@ -1,6 +1,8 @@
-from django.http import HttpResponse, HttpResponseForbidden
+from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import Aula, Estudiante, Profesor, Clase, Asignatura, Hora, Grado
+import json
+from django.views.decorators.csrf import csrf_exempt
+from .models import Aula, Estudiante, Profesor, Ficha, FichaAsignada, Asignatura, Hora, Grado
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth import login, authenticate
 from django.contrib import messages
@@ -60,20 +62,18 @@ class HoraForm(forms.ModelForm):
         model = Hora
         fields = ['hora_inicio', 'hora_fin']
 
-class ClaseForm(forms.ModelForm):
+class FichaAsignadaForm(forms.ModelForm):
     class Meta:
-        model = Clase
-        fields = ['descripcion_clase', 'profesor', 'aula', 'hora', 'dia', 'grado']
+        model = FichaAsignada
+        fields = ['ficha', 'aula', 'hora', 'dia']
         labels = {
-            'descripcion_clase': 'Descripción de la Clase',
-            'profesor': 'Profesor',
+            'ficha': 'Ficha/Lección',
             'aula': 'Aula',
             'hora': 'Hora',
             'dia': 'Día',
-            'grado': 'Grado',
         }
         help_texts = {
-            'grado': 'Selecciona el grado al que se asignará esta clase.',
+            'ficha': 'Selecciona la ficha a asignar en este horario.',
         }
 
 def login_view(request):
@@ -152,31 +152,31 @@ def horario_view(request):
         if hasattr(user_obj, 'profesor_perfil'):
             profesor_obj = user_obj.profesor_perfil
             print(f"DEBUG: Processing professor: {profesor_obj.primer_nombre} {profesor_obj.primer_apellido}")
-            clases = Clase.objects.filter(profesor=profesor_obj).order_by('hora__hora_inicio', 'dia')
+            clases = FichaAsignada.objects.filter(ficha__profesor=profesor_obj).order_by('hora__hora_inicio', 'dia')
             print(f"DEBUG: Classes found for professor: {clases.count()}")
             for clase in clases:
-                dia_str = dict(Clase.DIAS_SEMANA).get(clase.dia)
-                print(f"DEBUG: Class: {clase.descripcion_clase}, Dia: {dia_str}, Hora: {clase.hora.hora_inicio}, Grado: {clase.estudiantes.first().grado.nombre if clase.estudiantes.first() else 'N/A'}, Aula: {clase.aula.nombre}")
+                dia_str = dict(FichaAsignada.DIAS_SEMANA).get(clase.dia)
+                print(f"DEBUG: Class: {clase.ficha.descripcion_ficha}, Dia: {dia_str}, Hora: {clase.hora.hora_inicio}, Grado: {clase.ficha.grado.nombre}, Aula: {clase.aula.nombre}")
                 if dia_str:
                     horario_por_dia[dia_str].append({
                         'hora': f"{clase.hora.hora_inicio.strftime('%H:%M')} - {clase.hora.hora_fin.strftime('%H:%M')}",
-                        'grado': clase.grado.nombre,
+                        'grado': clase.ficha.grado.nombre,
                         'aula': clase.aula.nombre,
                     })
     elif user_rol == 'estudiante':
         if hasattr(user_obj, 'estudiante_perfil'):
             estudiante_obj = user_obj.estudiante_perfil
             print(f"DEBUG: Processing student: {estudiante_obj.primer_nombre} {estudiante_obj.primer_apellido}")
-            clases = Clase.objects.filter(grado=estudiante_obj.grado).order_by('hora__hora_inicio', 'dia')
+            clases = FichaAsignada.objects.filter(ficha__grado=estudiante_obj.grado).order_by('hora__hora_inicio', 'dia')
             print(f"DEBUG: Classes found for student: {clases.count()}")
             for clase in clases:
-                dia_str = dict(Clase.DIAS_SEMANA).get(clase.dia)
-                print(f"DEBUG: Class: {clase.descripcion_clase}, Dia: {dia_str}, Hora: {clase.hora.hora_inicio}, Asignatura: {clase.profesor.asignatura.nombre}, Profesor: {clase.profesor.primer_nombre}, Aula: {clase.aula.nombre}")
+                dia_str = dict(FichaAsignada.DIAS_SEMANA).get(clase.dia)
+                print(f"DEBUG: Class: {clase.ficha.descripcion_ficha}, Dia: {dia_str}, Hora: {clase.hora.hora_inicio}, Asignatura: {clase.ficha.asignatura.nombre}, Profesor: {clase.ficha.profesor.primer_nombre}, Aula: {clase.aula.nombre}")
                 if dia_str:
                     horario_por_dia[dia_str].append({
                         'hora': f"{clase.hora.hora_inicio.strftime('%H:%M')} - {clase.hora.hora_fin.strftime('%H:%M')}",
-                        'asignatura': clase.profesor.asignatura.nombre, 
-                        'profesor': f"{clase.profesor.primer_nombre} {clase.profesor.primer_apellido}",
+                        'asignatura': clase.ficha.asignatura.nombre, 
+                        'profesor': f"{clase.ficha.profesor.primer_nombre} {clase.ficha.profesor.primer_apellido}",
                         'aula': clase.aula.nombre,
                     })
     
@@ -225,7 +225,7 @@ def lista_aulas(request):
 
 
 def lista_clases(request):
-    clases = Clase.objects.all()
+    clases = FichaAsignada.objects.all()
     return render(request, 'mi_app/lista_clases.html', {'clases': clases})
 
 
@@ -538,29 +538,18 @@ def gestionar_clases(request):
         return redirect('login')
     query = request.GET.get('q', '')
     if query:
-        clases = Clase.objects.filter(descripcion_clase__icontains=query)
+        clases = FichaAsignada.objects.filter(ficha__descripcion_ficha__icontains=query)
     else:
-        clases = Clase.objects.all()
+        clases = FichaAsignada.objects.all()
     if request.method == 'POST':
-        form = ClaseForm(request.POST)
+        form = FichaAsignadaForm(request.POST)
         if form.is_valid():
             clase = form.save(commit=False)
-            clase.save() # Guardar la instancia de Clase primero para poder añadir estudiantes
-            
-            codigo_estudiante = form.cleaned_data.get('codigo_estudiante_para_clase')
-            if codigo_estudiante:
-                try:
-                    estudiante = Estudiante.objects.get(codigo_estudiante=codigo_estudiante)
-                    clase.estudiantes.add(estudiante) # Añadir el estudiante a la clase
-                    messages.success(request, f'Clase agregada correctamente y estudiante {estudiante.primer_nombre} asociado.')
-                except Estudiante.DoesNotExist:
-                    messages.error(request, 'El código de estudiante proporcionado no existe.')
-            else:
-                messages.success(request, 'Clase agregada correctamente.')
-            
+            clase.save()
+            messages.success(request, 'Clase asignada correctamente.')
             return redirect('gestionar_clases')
     else:
-        form = ClaseForm()
+        form = FichaAsignadaForm()
     return render(request, 'admin/gestionar_clases.html', {'clases': clases, 'form': form, 'query': query})
 
 def ver_horarios(request):
@@ -576,11 +565,85 @@ def ver_horarios(request):
     selected_user_type = request.GET.get('user_type')
 
     if selected_user_code and selected_user_type:
-        # Redirigir a la vista de horario con los parámetros del usuario seleccionado
-        # Ahora pasamos el código en lugar del ID
         return redirect(reverse('horario_view') + f'?user_code={selected_user_code}&user_type={selected_user_type}')
 
-    context = {
-        'message': 'Selecciona un tipo de usuario e ingresa su código para ver su horario.'
-    }
-    return render(request, 'admin/ver_horarios.html', context)
+    return render(request, 'admin/ver_horarios.html', {'user_rol': request.user.rol})
+
+@login_required
+def tablero_interactivo_view(request):
+    if request.user.rol != 'admin':
+        messages.error(request, 'No tienes permisos para acceder a esta página.')
+        return redirect('login')
+    return render(request, 'admin/tablero_interactivo.html')
+
+@login_required
+def api_get_tablero_data(request):
+    if request.user.rol != 'admin':
+        return JsonResponse({'error': 'Unauthorized'}, status=403)
+    
+    grados = list(Grado.objects.values('id', 'nombre'))
+    horas = list(Hora.objects.values('id', 'hora_inicio', 'hora_fin').order_by('hora_inicio'))
+    aulas = list(Aula.objects.values('id', 'nombre'))
+    
+    fichas = list(Ficha.objects.values(
+        'id', 'descripcion_ficha', 'horas_totales', 
+        'asignatura__nombre', 'asignatura__abreviatura', 'asignatura__color',
+        'profesor__primer_nombre', 'profesor__abreviatura', 'profesor__id',
+        'grado__nombre', 'grado__id'
+    ))
+    
+    asignadas = list(FichaAsignada.objects.values(
+        'id', 'ficha_id', 'dia', 'hora_id', 'aula_id'
+    ))
+    
+    return JsonResponse({
+        'grados': grados,
+        'horas': horas,
+        'aulas': aulas,
+        'fichas': fichas,
+        'asignadas': asignadas,
+        'dias': [d[0] for d in FichaAsignada.DIAS_SEMANA]
+    })
+
+@csrf_exempt
+@login_required
+def api_asignar_ficha(request):
+    if request.user.rol != 'admin':
+        return JsonResponse({'error': 'Unauthorized'}, status=403)
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        ficha_id = data.get('ficha_id')
+        dia = data.get('dia')
+        hora_id = data.get('hora_id')
+        aula_id = data.get('aula_id')
+        
+        if FichaAsignada.objects.filter(dia=dia, hora_id=hora_id, aula_id=aula_id).exists():
+            return JsonResponse({'success': False, 'error': 'Aula ocupada en esa hora y día.'})
+            
+        ficha = get_object_or_404(Ficha, id=ficha_id)
+        
+        if FichaAsignada.objects.filter(dia=dia, hora_id=hora_id, ficha__profesor=ficha.profesor).exists():
+            return JsonResponse({'success': False, 'error': 'El profesor ya está ocupado en esa hora.'})
+
+        if FichaAsignada.objects.filter(dia=dia, hora_id=hora_id, ficha__grado=ficha.grado).exists():
+            return JsonResponse({'success': False, 'error': 'El grado ya tiene clase en esa hora.'})
+            
+        asignacion = FichaAsignada.objects.create(
+            ficha_id=ficha_id,
+            dia=dia,
+            hora_id=hora_id,
+            aula_id=aula_id
+        )
+        return JsonResponse({'success': True, 'asignacion_id': asignacion.id})
+
+@csrf_exempt
+@login_required
+def api_desasignar_ficha(request):
+    if request.user.rol != 'admin':
+        return JsonResponse({'error': 'Unauthorized'}, status=403)
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        asignacion_id = data.get('asignacion_id')
+        asignacion = get_object_or_404(FichaAsignada, id=asignacion_id)
+        asignacion.delete()
+        return JsonResponse({'success': True})

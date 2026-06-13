@@ -1,0 +1,240 @@
+{% extends 'admin/base_admin.html' %}
+{% block title %}Horario Individual - aSc{% endblock %}
+
+{% block extra_head %}
+<style>
+/* Modern Premium Timetable Design */
+.timetable-classic {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-family: 'Outfit', sans-serif;
+    text-align: center;
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    border: 1px solid #e2e8f0;
+}
+.timetable-classic th, .timetable-classic td {
+    padding: 12px;
+    border-bottom: 1px solid #e2e8f0;
+    border-right: 1px solid #e2e8f0;
+}
+.timetable-classic th {
+    background-color: #f8fafc;
+    color: #334155;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+}
+.timetable-classic th:last-child, .timetable-classic td:last-child {
+    border-right: none;
+}
+.timetable-classic tr:last-child td {
+    border-bottom: none;
+}
+.timetable-classic th.corner {
+    background-color: #f1f5f9;
+}
+.timetable-classic .hora-cell {
+    background-color: #f8fafc;
+    color: #475569;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+.timetable-classic .recreo-row td {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    color: #92400e;
+    font-weight: 700;
+    font-size: 1.1rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 16px;
+}
+.ficha-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    background-color: #f0fdfa;
+    border: 1px solid #ccfbf1;
+    border-radius: 8px;
+    padding: 8px;
+    margin-bottom: 6px;
+    transition: all 0.2s ease;
+}
+.ficha-content:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(13, 148, 136, 0.1);
+    background-color: #ccfbf1;
+}
+.ficha-content:last-child {
+    margin-bottom: 0;
+}
+.ficha-asignatura {
+    font-weight: 700;
+    color: #0f766e;
+    margin-bottom: 2px;
+}
+.ficha-aula {
+    color: #475569;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+.ficha-entidad {
+    color: #64748b;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-top: 2px;
+    background: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid #e2e8f0;
+}
+
+@media print {
+    body * { visibility: hidden; }
+    #printArea, #printArea * { visibility: visible; }
+    #printArea { position: absolute; left: 0; top: 0; width: 100%; box-shadow: none !important; }
+    .timetable-classic { border: 1px solid #cbd5e1 !important; }
+    .timetable-classic th, .timetable-classic td { border-color: #cbd5e1 !important; }
+    .timetable-classic th { background-color: #f8fafc !important; -webkit-print-color-adjust: exact; }
+    .timetable-classic .hora-cell { background-color: #f8fafc !important; -webkit-print-color-adjust: exact; }
+    .timetable-classic .recreo-row td { background: #fef3c7 !important; -webkit-print-color-adjust: exact; }
+    .ficha-content { border: 1px solid #cbd5e1 !important; background: #f8fafc !important; -webkit-print-color-adjust: exact; box-shadow: none !important; transform: none !important; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="app-impresion" style="padding: 20px;">
+    <div class="mb-3 d-print-none" style="display: flex; gap: 10px; align-items: center; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <button class="btn btn-secondary" onclick="window.history.back()"><i class="fa-solid fa-arrow-left"></i> Volver</button>
+        <button class="btn btn-primary" onclick="window.print()"><i class="fa-solid fa-print"></i> Imprimir Horario</button>
+        
+        <div style="flex-grow: 1;"></div>
+        
+        <strong>Vista:</strong>
+        <select v-model="tipo_seleccionado" class="form-control" style="width: 200px;">
+            <option value="grado">Estudiantes (Por Grado)</option>
+            <option value="profesor">Profesores</option>
+        </select>
+        
+        <strong>Seleccionar:</strong>
+        <select v-model="id_seleccionado" class="form-control" style="width: 250px;">
+            <option v-for="opt in opciones" :value="opt.id">[[ opt.nombre || (opt.primer_nombre + ' ' + opt.primer_apellido) ]]</option>
+        </select>
+        
+        <button class="btn btn-success" @click="fetchData"><i class="fa-solid fa-search"></i> Cargar</button>
+    </div>
+
+    <div v-if="loading" class="text-center" style="padding: 2rem;">
+        <i class="fa-solid fa-spinner fa-spin fa-2x"></i>
+        <p>Cargando horario...</p>
+    </div>
+
+    <div id="printArea" v-if="!loading && datos" style="background: white; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <h2 class="text-center mb-4" style="text-transform: uppercase;">HORARIO DE CLASES - [[ tituloActual ]]</h2>
+        <table class="timetable-classic">
+            <thead>
+                <tr>
+                    <th class="corner"></th>
+                    <th v-for="dia in datos.dias" :key="dia">[[ dia ]]</th>
+                </tr>
+            </thead>
+            <tbody>
+                <template v-for="fila in datos.estructura" :key="fila.id || fila.inicio">
+                    <tr v-if="fila.tipo === 'hora'">
+                        <td class="hora-cell">[[ fila.inicio ]] - [[ fila.fin ]]</td>
+                        <td v-for="dia in datos.dias" :key="dia">
+                            <div v-for="asig in getAsignaciones(dia, fila.id)" class="ficha-content">
+                                <span class="ficha-asignatura">[[ asig.asignatura ]]</span>
+                                <span class="ficha-aula">[[ asig.aula ]]</span>
+                                <span class="ficha-entidad">[[ tipo_seleccionado === 'profesor' ? asig.grado : asig.profesor ]]</span>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr v-else class="recreo-row">
+                        <td>RECREO</td>
+                        <td :colspan="datos.dias.length + 1">[[ fila.inicio ]] - [[ fila.fin ]]</td>
+                    </tr>
+                </template>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script>
+const { createApp } = Vue;
+
+createApp({
+    delimiters: ['[[', ']]'],
+    data() {
+        return {
+            tipo_seleccionado: '{{ tipo_inicial }}',
+            id_seleccionado: '{{ id_inicial }}',
+            opciones: [],
+            datos: null,
+            loading: false,
+            tituloActual: ''
+        }
+    },
+    watch: {
+        tipo_seleccionado() {
+            this.id_seleccionado = '';
+            this.loadOptions();
+        }
+    },
+    mounted() {
+        this.loadOptions().then(() => {
+            if (this.id_seleccionado) {
+                this.fetchData();
+            }
+        });
+    },
+    methods: {
+        async loadOptions() {
+            try {
+                const res = await axios.get('/api/fichas/data/');
+                if(this.tipo_seleccionado === 'grado') {
+                    this.opciones = res.data.grados;
+                } else {
+                    this.opciones = res.data.profesores;
+                }
+            } catch(e) {
+                console.error("Error cargando opciones", e);
+            }
+        },
+        async fetchData() {
+            if(!this.id_seleccionado) {
+                alert("Selecciona una opción primero");
+                return;
+            }
+            this.loading = true;
+            try {
+                const res = await axios.get(`/api/horario/individual/?tipo=${this.tipo_seleccionado}&id=${this.id_seleccionado}`);
+                this.datos = res.data;
+                const opt = this.opciones.find(o => String(o.id) === String(this.id_seleccionado));
+                if (opt) {
+                    this.tituloActual = opt.nombre || (opt.primer_nombre + " " + opt.primer_apellido);
+                }
+            } catch(e) {
+                console.error("Error obteniendo horario", e);
+            } finally {
+                this.loading = false;
+            }
+        },
+        getAsignaciones(dia, horaId) {
+            return this.datos.asignaciones.filter(a => a.dia === dia && a.hora_id === horaId);
+        }
+    }
+}).mount('#app-impresion');
+</script>
+{% endblock %}

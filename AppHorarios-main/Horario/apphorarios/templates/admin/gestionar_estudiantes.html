@@ -35,7 +35,8 @@
                 <table class="table align-middle">
                     <thead>
                         <tr>
-                            <th>Codigo</th>
+                            <th>Código</th>
+                            <th>Identificación</th>
                             <th>Nombre</th>
                             <th>Grado</th>
                             <th>Usuario</th>
@@ -46,6 +47,7 @@
                         {% for estudiante in estudiantes %}
                             <tr>
                                 <td>{{ estudiante.codigo_estudiante }}</td>
+                                <td>{{ estudiante.identificacion }}</td>
                                 <td>{{ estudiante.primer_nombre }} {{ estudiante.primer_apellido }}</td>
                                 <td>{{ estudiante.grado.nombre }}</td>
                                 <td>{{ estudiante.usuario.username|default:'Pendiente' }}</td>

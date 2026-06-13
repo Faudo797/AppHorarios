@@ -23,12 +23,11 @@ class BaseScheduleTestCase(TestCase):
         self.hora = Hora.objects.create(hora_inicio=time(7, 0), hora_fin=time(8, 0))
 
         self.profesor_user = User.objects.create_user(
-            username='PROF001',
+            username='1',
             password='123456',
             rol='profesor',
         )
         self.profesor = Profesor.objects.create(
-            codigo_profesor='PROF001',
             identificacion='9001',
             primer_nombre='Ana',
             primer_apellido='Lopez',
@@ -87,12 +86,11 @@ class HorarioViewTests(BaseScheduleTestCase):
     def setUp(self):
         super().setUp()
         self.estudiante_user = User.objects.create_user(
-            username='EST001',
+            username='2',
             password='123456',
             rol='estudiante',
         )
         self.estudiante = Estudiante.objects.create(
-            codigo_estudiante='EST001',
             identificacion='8001',
             primer_nombre='Luis',
             primer_apellido='Perez',
@@ -109,7 +107,7 @@ class HorarioViewTests(BaseScheduleTestCase):
         )
 
     def test_estudiante_visualiza_su_horario(self):
-        self.client.login(username='EST001', password='123456')
+        self.client.login(username='2', password='123456')
 
         response = self.client.get(reverse('horario_view'))
 
@@ -147,7 +145,7 @@ class HorarioViewTests(BaseScheduleTestCase):
         self.assertContains(response, 'Matematicas')
 
     def test_exportar_horario_pdf_y_excel(self):
-        self.client.login(username='EST001', password='123456')
+        self.client.login(username='2', password='123456')
         
         response = self.client.get(reverse('exportar_horario_pdf'))
         self.assertEqual(response.status_code, 200)

@@ -37,6 +37,8 @@
                         <tr>
                             <th>Aula</th>
                             <th>Capacidad</th>
+                            <th>Grados Permitidos</th>
+                            <th>Profesores</th>
                             <th class="text-end">Acciones</th>
                         </tr>
                     </thead>
@@ -45,6 +47,20 @@
                             <tr>
                                 <td>{{ aula.nombre }}</td>
                                 <td>{{ aula.capacidad }}</td>
+                                <td>
+                                    {% for grado in aula.grados_permitidos.all %}
+                                        <span class="tag">{{ grado.codigo_grado }}</span>
+                                    {% empty %}
+                                        <span class="muted">Todos</span>
+                                    {% endfor %}
+                                </td>
+                                <td>
+                                    {% for profesor in aula.profesores_asignados.all %}
+                                        <small class="d-block">{{ profesor.primer_nombre }} {{ profesor.primer_apellido }}</small>
+                                    {% empty %}
+                                        <span class="muted">Ninguno</span>
+                                    {% endfor %}
+                                </td>
                                 <td class="text-end">
                                     <a href="{% url 'editar_aula' aula.id %}" class="btn btn-sm btn-soft">Editar</a>
                                     <a href="{% url 'eliminar_aula' aula.id %}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Deseas eliminar esta aula?');">Eliminar</a>

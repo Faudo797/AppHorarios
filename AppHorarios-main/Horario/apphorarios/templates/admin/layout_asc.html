@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}aSc TimeTables - EduSchedule{% endblock %}</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- Axios -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        :root {
+            --asc-blue: #005A9E;
+            --asc-light-blue: #0078D4;
+            --asc-bg: #F3F2F1;
+            --asc-sidebar: #E1DFDD;
+            --asc-text: #323130;
+            --asc-border: #C8C6C4;
+            --asc-white: #FFFFFF;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--asc-bg);
+            color: var(--asc-text);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Ribbon (Top Navigation) */
+        .ribbon {
+            background-color: var(--asc-blue);
+            color: var(--asc-white);
+            display: flex;
+            align-items: center;
+            padding: 0 1rem;
+            height: 48px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 100;
+        }
+
+        .ribbon .logo {
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-right: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .ribbon-tabs {
+            display: flex;
+            height: 100%;
+        }
+
+        .ribbon-tab {
+            padding: 0 1rem;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            height: 100%;
+            font-size: 0.9rem;
+            border-bottom: 3px solid transparent;
+            text-decoration: none;
+            color: var(--asc-white);
+        }
+
+        .ribbon-tab:hover {
+            background-color: rgba(255,255,255,0.1);
+        }
+
+        .ribbon-tab.active {
+            border-bottom-color: var(--asc-white);
+            background-color: rgba(255,255,255,0.15);
+        }
+
+        /* Main Workspace Layout */
+        .workspace {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Sidebar (Left Navigation) */
+        .sidebar {
+            width: 250px;
+            background-color: var(--asc-sidebar);
+            border-right: 1px solid var(--asc-border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-section {
+            padding: 1rem 0;
+        }
+
+        .sidebar-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: #605E5C;
+            font-weight: 600;
+            padding: 0 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar-item {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            color: var(--asc-text);
+            text-decoration: none;
+            gap: 12px;
+            font-size: 0.9rem;
+        }
+
+        .sidebar-item:hover {
+            background-color: rgba(0,0,0,0.05);
+        }
+
+        .sidebar-item.active {
+            background-color: var(--asc-white);
+            border-left: 3px solid var(--asc-blue);
+            font-weight: 600;
+        }
+
+        .sidebar-item i {
+            width: 20px;
+            text-align: center;
+            color: var(--asc-light-blue);
+            font-size: 1.1rem;
+        }
+
+        /* Content Area */
+        .content-area {
+            flex: 1;
+            background-color: var(--asc-white);
+            overflow-y: auto;
+            position: relative;
+        }
+
+        /* Common Page Header */
+        .page-header {
+            padding: 1rem 2rem;
+            border-bottom: 1px solid var(--asc-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #FAFAFA;
+        }
+
+        .page-title {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 400;
+        }
+
+        .toolbar-btn {
+            background-color: var(--asc-light-blue);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 2px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+
+        .toolbar-btn:hover {
+            background-color: var(--asc-blue);
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-container {
+            background: white;
+            border-radius: 4px;
+            width: 500px;
+            max-width: 90%;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header {
+            padding: 1rem;
+            border-bottom: 1px solid var(--asc-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #F3F2F1;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.2rem;
+            color: #605E5C;
+        }
+
+        .modal-body {
+            padding: 1rem;
+            overflow-y: auto;
+            max-height: 60vh;
+        }
+
+        .modal-footer {
+            padding: 1rem;
+            border-top: 1px solid var(--asc-border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+            background-color: #FAFAFA;
+        }
+
+        .btn-cancel {
+            background-color: white;
+            border: 1px solid var(--asc-border);
+            color: var(--asc-text);
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+        }
+
+        .btn-cancel:hover {
+            background-color: #F3F2F1;
+        }
+
+        /* Form elements */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.25rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid var(--asc-border);
+            border-radius: 2px;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+
+        /* Data Tables */
+        .asc-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .asc-table th, .asc-table td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--asc-border);
+            font-size: 0.9rem;
+        }
+
+        .asc-table th {
+            background-color: #FAFAFA;
+            font-weight: 600;
+            color: #605E5C;
+            position: sticky;
+            top: 0;
+        }
+
+        .asc-table tr:hover {
+            background-color: #F3F2F1;
+        }
+
+        .action-icons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .action-icon {
+            cursor: pointer;
+            color: var(--asc-light-blue);
+        }
+
+        .action-icon.delete {
+            color: #D13438;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+    <!-- Ribbon Navigation -->
+    <header class="ribbon">
+        <div class="logo">
+            <i class="fa-solid fa-calendar-days"></i> aSc TimeTables
+        </div>
+        <div class="ribbon-tabs">
+            <a href="{% url 'admin_dashboard' %}" class="ribbon-tab {% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}">Principal</a>
+            <a href="{% url 'asc_especificacion' %}" class="ribbon-tab {% if request.resolver_match.url_name == 'asc_especificacion' %}active{% endif %}">Especificación</a>
+            <a href="{% url 'tablero_interactivo' %}" class="ribbon-tab {% if request.resolver_match.url_name == 'tablero_interactivo' %}active{% endif %}">Horario</a>
+        </div>
+        <div style="margin-left: auto;">
+            <form action="{% url 'logout' %}" method="post" style="margin:0;">
+                {% csrf_token %}
+                <button type="submit" style="background:none;border:none;color:white;cursor:pointer;font-size:0.9rem;">
+                    Cerrar sesión <i class="fa-solid fa-right-from-bracket ms-1"></i>
+                </button>
+            </form>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <div class="workspace" id="app-workspace">
+        {% block sidebar %}
+        <!-- Default Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-section">
+                <div class="sidebar-title">Pasos de Especificación</div>
+                <a href="{% url 'asc_especificacion' %}#colegio" class="sidebar-item" id="nav-colegio">
+                    <i class="fa-solid fa-school"></i> 1. Colegio
+                </a>
+                <a href="{% url 'asc_especificacion' %}#asignaturas" class="sidebar-item" id="nav-asignaturas">
+                    <i class="fa-solid fa-book"></i> 2. Asignaturas
+                </a>
+                <a href="{% url 'asc_especificacion' %}#grados" class="sidebar-item" id="nav-grados">
+                    <i class="fa-solid fa-users"></i> 3. Clases / Grados
+                </a>
+                <a href="{% url 'asc_especificacion' %}#aulas" class="sidebar-item" id="nav-aulas">
+                    <i class="fa-solid fa-door-open"></i> 4. Aulas
+                </a>
+                <a href="{% url 'asc_especificacion' %}#profesores" class="sidebar-item" id="nav-profesores">
+                    <i class="fa-solid fa-chalkboard-user"></i> 5. Profesores
+                </a>
+                <a href="{% url 'asc_especificacion' %}#lecciones" class="sidebar-item" id="nav-lecciones">
+                    <i class="fa-solid fa-clipboard-list"></i> 6. Lecciones (Fichas)
+                </a>
+            </div>
+            <div class="sidebar-section">
+                <div class="sidebar-title">Generación</div>
+                <a href="{% url 'tablero_interactivo' %}" class="sidebar-item">
+                    <i class="fa-solid fa-table-cells"></i> Generar Horario
+                </a>
+            </div>
+        </aside>
+        {% endblock %}
+
+        <main class="content-area">
+            {% block content %}
+            {% endblock %}
+        </main>
+    </div>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

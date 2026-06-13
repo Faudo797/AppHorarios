@@ -1,0 +1,502 @@
+{% extends 'admin/layout_asc.html' %}
+
+{% block extra_css %}
+<style>
+    /* Estilo aSc para la cuadrícula */
+    .timetable-wrapper {
+        padding: 1rem;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        background-color: var(--asc-bg);
+    }
+    
+    .timetable-header-tools {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+        align-items: center;
+        background: white;
+        padding: 1rem;
+        border: 1px solid var(--asc-border);
+    }
+
+    .table-responsive {
+        flex: 1;
+        overflow: auto;
+        background: white;
+        border: 1px solid var(--asc-border);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .table th, .table td {
+        border: 1px solid var(--asc-border);
+        text-align: center;
+        vertical-align: middle;
+        padding: 0;
+    }
+
+    .table th {
+        background-color: #F3F2F1;
+        color: #323130;
+        font-weight: 600;
+        padding: 0.5rem;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+    }
+    
+    .table-dark th {
+        background-color: #E1DFDD;
+        color: #323130;
+    }
+    
+    .col-grado {
+        position: sticky;
+        left: 0;
+        background-color: #F3F2F1;
+        z-index: 3;
+        font-weight: bold;
+        min-width: 120px;
+        text-align: left !important;
+        padding-left: 1rem !important;
+    }
+
+    .cell-zone {
+        min-height: 80px;
+        min-width: 100px;
+        padding: 4px;
+        background-color: white;
+        transition: background-color 0.2s;
+        height: 100%;
+    }
+
+    .cell-zone.drag-over {
+        background-color: #EBF3FC;
+        border: 2px dashed var(--asc-light-blue);
+    }
+
+    .ficha-card {
+        background-color: white;
+        border: 1px solid var(--asc-border);
+        border-radius: 2px;
+        padding: 4px;
+        margin-bottom: 4px;
+        cursor: grab;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        font-size: 0.8rem;
+        text-align: left;
+        position: relative;
+    }
+
+    .ficha-card:active {
+        cursor: grabbing;
+    }
+
+    .ficha-title {
+        font-weight: bold;
+        margin-bottom: 2px;
+        font-size: 0.85rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .ficha-details {
+        color: #605E5C;
+        font-size: 0.75rem;
+        line-height: 1.2;
+    }
+
+    .remove-btn {
+        position: absolute;
+        top: 2px;
+        right: 2px;
+        background: rgba(255, 255, 255, 0.8);
+        border: none;
+        color: #D13438;
+        font-size: 0.8rem;
+        cursor: pointer;
+        padding: 0;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .remove-btn:hover {
+        background: #D13438;
+        color: white;
+    }
+
+    /* Unassigned Container Override for Sidebar */
+    .unassigned-container {
+        padding: 0.5rem;
+        flex: 1;
+        overflow-y: auto;
+        background: var(--asc-bg);
+        margin: 0.5rem;
+        border: 1px dashed var(--asc-border);
+    }
+</style>
+{% endblock %}
+
+{% block sidebar %}
+<aside class="sidebar">
+    <div class="sidebar-section">
+        <div class="sidebar-title">Vistas de Horario</div>
+        <a href="#" class="sidebar-item" :class="{active: vistaActual === 'grados'}" @click.prevent="cambiarVista('grados')">
+            <i class="fa-solid fa-users"></i> Por Clases (Grados)
+        </a>
+        <a href="#" class="sidebar-item" :class="{active: vistaActual === 'profesores'}" @click.prevent="cambiarVista('profesores')">
+            <i class="fa-solid fa-chalkboard-user"></i> Por Profesores
+        </a>
+        <a href="#" class="sidebar-item" :class="{active: vistaActual === 'aulas'}" @click.prevent="cambiarVista('aulas')">
+            <i class="fa-solid fa-door-open"></i> Por Aulas
+        </a>
+    </div>
+    
+    <div class="sidebar-section" style="display:flex; flex-direction:column; flex:1; overflow:hidden;">
+        <div class="sidebar-title">Tarjetas sin Asignar</div>
+        <div class="unassigned-container" id="unassigned-cards" @dragover="allowDrop" @drop="dropToUnassigned">
+            <div v-for="ficha in getFichasNoAsignadas()" :key="'un_'+ficha.id" 
+                 class="ficha-card shadow-sm"
+                 :style="{ borderLeft: '4px solid ' + ficha.asignatura__color }"
+                 draggable="true" 
+                 @dragstart="dragStart($event, ficha, null)">
+                <div class="ficha-title" :style="{ color: ficha.asignatura__color }">[[ ficha.asignatura__nombre ]]</div>
+                <div class="ficha-details">
+                    <i class="fa-solid fa-user-tie"></i> [[ ficha.profesor__abreviatura || ficha.profesor__primer_nombre ]]<br>
+                    <i class="fa-solid fa-users"></i> [[ ficha.grado__nombre ]]<br>
+                    <i class="fa-solid fa-clock"></i> [[ getHorasRestantes(ficha) ]] hrs disp.
+                </div>
+            </div>
+            <div v-if="getFichasNoAsignadas().length === 0" class="text-muted text-center mt-3" style="font-size:0.8rem;">
+                Todas las fichas han sido asignadas.
+            </div>
+        </div>
+    </div>
+</aside>
+{% endblock %}
+
+{% block content %}
+<div class="timetable-wrapper">
+    <div class="timetable-header-tools">
+        <h2 class="spec-title" style="margin:0;">Generación de Horario - Vista por <span style="text-transform: capitalize;">[[ vistaActual ]]</span></h2>
+        <div style="display:flex; gap:10px; align-items:center;">
+            <select class="form-control" v-model="estrategia" style="width: auto; height: 35px; border-radius: 4px; border: 1px solid var(--asc-border);">
+                <option value="2-2">Agrupar 2-2 (Bloques Dobles)</option>
+                <option value="2-1-1">Agrupar 2-1-1 (Mixto)</option>
+                <option value="1-1-1-1">Separar 1-1-1-1 (Individual)</option>
+            </select>
+            <button class="toolbar-btn text-white" style="background-color: #107C41;" @click="generarHorario()" :disabled="generando">
+                <i class="fa-solid fa-wand-magic-sparkles" :class="{'fa-spin': generando}"></i> 
+                [[ generando ? 'Generando...' : 'Generar Automáticamente' ]]
+            </button>
+            <button class="toolbar-btn secondary" @click="fetchData()"><i class="fa-solid fa-rotate-right"></i> Recargar</button>
+            <button class="toolbar-btn text-white" style="background-color: #D13438;" @click="limpiarHorario()"><i class="fa-solid fa-trash-can"></i> Limpiar Todo</button>
+            <a href="{% url 'horario_impresion' %}" class="toolbar-btn text-decoration-none text-dark"><i class="fa-solid fa-print"></i> Imprimir / Vista Individual</a>
+        </div>
+    </div>
+
+    <div v-if="loading" class="text-center" style="padding: 2rem;">
+        <i class="fa-solid fa-spinner fa-spin fa-2x" style="color: var(--asc-blue);"></i>
+        <p class="mt-2">Cargando datos de aSc...</p>
+    </div>
+
+    <div v-else class="table-responsive">
+        <table class="table">
+            <thead class="table-dark">
+                <tr>
+                    <th class="col-grado">
+                        <span v-if="vistaActual === 'grados'">Clase / Grado</span>
+                        <span v-if="vistaActual === 'profesores'">Profesor</span>
+                        <span v-if="vistaActual === 'aulas'">Aula</span>
+                    </th>
+                    <th v-for="dia in dias" :key="dia" :colspan="horas.length" style="border-left: 2px solid #C8C6C4;">
+                        [[ dia ]]
+                    </th>
+                </tr>
+                <tr>
+                    <th class="col-grado"></th>
+                    <template v-for="dia in dias" :key="'h_'+dia">
+                        <th v-for="hora in horas" :key="hora.id" style="font-size:0.8rem; padding: 4px;">
+                            [[ hora.hora_inicio.substring(0,5) ]] - [[ hora.hora_fin.substring(0,5) ]]
+                        </th>
+                    </template>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="fila in getFilasActuales()" :key="fila.id">
+                    <td class="col-grado">
+                        [[ getNombreFila(fila) ]]
+                    </td>
+                    <template v-for="dia in dias" :key="'c_'+dia">
+                        <td v-for="hora in horas" :key="hora.id" style="padding: 0; min-width: 100px;">
+                            <!-- Drop zone para cada celda -->
+                            <div class="cell-zone" 
+                                 :data-fila="fila.id" 
+                                 :data-dia="dia" 
+                                 :data-hora="hora.id"
+                                 @dragover="allowDrop"
+                                 @dragleave="dragLeave"
+                                 @drop="drop($event, dia, hora.id, fila.id)">
+                                
+                                <!-- Tarjetas asignadas a esta celda -->
+                                <div v-for="asignacion in getAsignaciones(dia, hora.id, fila.id)" :key="asignacion.id"
+                                     class="ficha-card"
+                                     :style="{ borderLeft: '4px solid ' + getFicha(asignacion.ficha_id).asignatura__color }"
+                                     draggable="true"
+                                     @dragstart="dragStart($event, getFicha(asignacion.ficha_id), asignacion)">
+                                    
+                                    <button class="remove-btn" @click.stop="desasignarFicha(asignacion.id)" title="Quitar">
+                                        <i class="fa-solid fa-xmark"></i>
+                                    </button>
+                                    
+                                    <div class="ficha-title" :style="{ color: getFicha(asignacion.ficha_id).asignatura__color }">
+                                        [[ getFicha(asignacion.ficha_id).asignatura__nombre ]]
+                                    </div>
+                                    <div class="ficha-details">
+                                        <span v-if="vistaActual !== 'profesores'">[[ getFicha(asignacion.ficha_id).profesor__abreviatura || getFicha(asignacion.ficha_id).profesor__primer_nombre ]]<br></span>
+                                        <span v-if="vistaActual !== 'grados'">[[ getFicha(asignacion.ficha_id).grado__nombre ]]<br></span>
+                                        <span v-if="asignacion.aula_id" :style="{color: vistaActual === 'aulas' ? '#605E5C' : 'var(--asc-blue)'}">
+                                            [[ getAula(asignacion.aula_id).nombre ]]
+                                        </span>
+                                        <span v-else class="text-danger">Sin Aula</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </template>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const { createApp } = Vue;
+
+    createApp({
+        delimiters: ['[[', ']]'],
+        data() {
+            return {
+                loading: true,
+                vistaActual: 'grados', // 'grados', 'profesores', 'aulas'
+                dias: [],
+                horas: [],
+                grados: [],
+                aulas: [],
+                profesores: [],
+                fichas: [],
+                asignadas: [],
+                draggedItem: null,
+                generando: false,
+                estrategia: '2-2'
+            }
+        },
+        mounted() {
+            this.fetchData();
+        },
+        methods: {
+            async fetchData() {
+                this.loading = true;
+                try {
+                    const res = await axios.get('/api/fichas/data/');
+                    this.dias = res.data.dias;
+                    this.horas = res.data.horas;
+                    this.grados = res.data.grados;
+                    this.aulas = res.data.aulas;
+                    this.profesores = res.data.profesores;
+                    this.fichas = res.data.fichas;
+                    this.asignadas = res.data.asignadas;
+                } catch (error) {
+                    console.error("Error al cargar datos:", error);
+                    alert("Error de conexión al cargar datos.");
+                } finally {
+                    this.loading = false;
+                }
+            },
+            cambiarVista(tipo) {
+                this.vistaActual = tipo;
+            },
+            getFilasActuales() {
+                if (this.vistaActual === 'grados') return this.grados;
+                if (this.vistaActual === 'profesores') return this.profesores;
+                if (this.vistaActual === 'aulas') return this.aulas;
+                return [];
+            },
+            getNombreFila(fila) {
+                if (this.vistaActual === 'profesores') {
+                    return fila.abreviatura || (fila.primer_nombre + ' ' + fila.primer_apellido);
+                }
+                return fila.nombre;
+            },
+            getFicha(fichaId) {
+                return this.fichas.find(f => f.id === fichaId) || {};
+            },
+            getAula(aulaId) {
+                return this.aulas.find(a => a.id === aulaId) || {};
+            },
+            getAsignaciones(dia, horaId, filaId) {
+                return this.asignadas.filter(a => {
+                    const ficha = this.getFicha(a.ficha_id);
+                    if (this.vistaActual === 'grados') {
+                        return a.dia === dia && a.hora_id === horaId && ficha.grado__id === filaId;
+                    } else if (this.vistaActual === 'profesores') {
+                        return a.dia === dia && a.hora_id === horaId && ficha.profesor__id === filaId;
+                    } else if (this.vistaActual === 'aulas') {
+                        return a.dia === dia && a.hora_id === horaId && a.aula_id === filaId;
+                    }
+                    return false;
+                });
+            },
+            getFichasNoAsignadas() {
+                return this.fichas.filter(ficha => {
+                    const asignadas = this.asignadas.filter(a => a.ficha_id === ficha.id);
+                    return asignadas.length < ficha.horas_totales;
+                });
+            },
+            getHorasRestantes(ficha) {
+                const asignadas = this.asignadas.filter(a => a.ficha_id === ficha.id);
+                return ficha.horas_totales - asignadas.length;
+            },
+            dragStart(event, ficha, asignacion = null) {
+                this.draggedItem = { ficha, asignacion };
+                event.dataTransfer.effectAllowed = 'move';
+                setTimeout(() => event.target.style.opacity = '0.5', 0);
+            },
+            allowDrop(event) {
+                event.preventDefault();
+                event.currentTarget.classList.add('drag-over');
+            },
+            dragLeave(event) {
+                event.currentTarget.classList.remove('drag-over');
+            },
+            async drop(event, dia, horaId, filaId) {
+                event.currentTarget.classList.remove('drag-over');
+                if (!this.draggedItem) return;
+                
+                const { ficha, asignacion } = this.draggedItem;
+                
+                // Determinar parámetros de asignación basados en la vista actual
+                let gradoId = ficha.grado__id;
+                let profesorId = ficha.profesor__id;
+                let aulaId = asignacion ? asignacion.aula_id : (this.aulas.length > 0 ? this.aulas[0].id : null);
+
+                // Validaciones según la vista
+                if (this.vistaActual === 'grados') {
+                    if (ficha.grado__id !== filaId) {
+                        alert("Esta lección pertenece a " + ficha.grado__nombre + ". No puedes ponerla en otro grado.");
+                        return;
+                    }
+                } else if (this.vistaActual === 'profesores') {
+                    if (ficha.profesor__id !== filaId) {
+                        alert("Esta lección pertenece a " + (ficha.profesor__abreviatura || ficha.profesor__primer_nombre) + ".");
+                        return;
+                    }
+                } else if (this.vistaActual === 'aulas') {
+                    // Si estamos en la vista de aulas, soltar una ficha asigna ESA aula
+                    aulaId = filaId;
+                }
+
+                try {
+                    // Desasignar si venía de un movimiento
+                    if (asignacion) {
+                        await axios.post('/api/fichas/desasignar/', { asignacion_id: asignacion.id });
+                        this.asignadas = this.asignadas.filter(a => a.id !== asignacion.id);
+                    }
+
+                    // Intentar nueva asignación
+                    const res = await axios.post('/api/fichas/asignar/', {
+                        ficha_id: ficha.id,
+                        dia: dia,
+                        hora_id: horaId,
+                        aula_id: aulaId
+                    });
+
+                    if (res.data.success) {
+                        this.asignadas.push({
+                            id: res.data.asignacion_id,
+                            ficha_id: ficha.id,
+                            dia: dia,
+                            hora_id: horaId,
+                            aula_id: aulaId
+                        });
+                    } else {
+                        alert(res.data.error);
+                        if (asignacion) this.fetchData(); // Restaurar
+                    }
+                } catch(e) {
+                    console.error(e);
+                    alert("Error de red.");
+                }
+                
+                this.draggedItem = null;
+                document.querySelectorAll('.ficha-card').forEach(el => el.style.opacity = '1');
+            },
+            async dropToUnassigned(event) {
+                event.currentTarget.classList.remove('drag-over');
+                if (!this.draggedItem || !this.draggedItem.asignacion) return;
+
+                const { asignacion } = this.draggedItem;
+                try {
+                    await axios.post('/api/fichas/desasignar/', { asignacion_id: asignacion.id });
+                    this.asignadas = this.asignadas.filter(a => a.id !== asignacion.id);
+                } catch(e) {
+                    console.error(e);
+                }
+                this.draggedItem = null;
+                document.querySelectorAll('.ficha-card').forEach(el => el.style.opacity = '1');
+            },
+            async desasignarFicha(asignacionId) {
+                if(!confirm("¿Quitar esta lección del horario?")) return;
+                try {
+                    await axios.post('/api/fichas/desasignar/', { asignacion_id: asignacionId });
+                    this.asignadas = this.asignadas.filter(a => a.id !== asignacionId);
+                } catch(e) {
+                    console.error(e);
+                }
+            },
+            async generarHorario() {
+                if(!confirm("¿Iniciar el generador automático? Esto puede tomar unos segundos.")) return;
+                this.generando = true;
+                try {
+                    const response = await axios.post('/api/fichas/generar/', { estrategia: this.estrategia });
+                    if (response.data.success) {
+                        alert(response.data.message);
+                        this.fetchData();
+                    } else {
+                        alert("Error: " + response.data.error);
+                    }
+                } catch(e) {
+                    alert("Error en el generador: " + e);
+                } finally {
+                    this.generando = false;
+                }
+            },
+            async limpiarHorario() {
+                if (confirm("¿Estás seguro de que deseas eliminar TODAS las asignaciones del horario? Esta acción no se puede deshacer.")) {
+                    try {
+                        const res = await axios.post('/api/horario/limpiar/');
+                        if (res.data.success) {
+                            this.fetchData();
+                        }
+                    } catch(e) {
+                        alert("Error al limpiar el horario.");
+                    }
+                }
+            }
+        }
+    }).mount('#app-workspace');
+</script>
+{% endblock %}

@@ -35,9 +35,11 @@
                 <table class="table align-middle">
                     <thead>
                         <tr>
-                            <th>Codigo</th>
+                            <th>Identificación</th>
                             <th>Nombre</th>
                             <th>Asignatura</th>
+                            <th>Intensidad H.</th>
+                            <th>Aulas</th>
                             <th>Grados</th>
                             <th class="text-end">Acciones</th>
                         </tr>
@@ -45,9 +47,17 @@
                     <tbody>
                         {% for profesor in profesores %}
                             <tr>
-                                <td>{{ profesor.codigo_profesor }}</td>
+                                <td>{{ profesor.identificacion }}</td>
                                 <td>{{ profesor.primer_nombre }} {{ profesor.primer_apellido }}</td>
                                 <td>{{ profesor.asignatura.nombre }}</td>
+                                <td>{{ profesor.intensidad_horaria }} hrs</td>
+                                <td>
+                                    {% for aula in profesor.aulas.all %}
+                                        <span class="tag">{{ aula.nombre }}</span>
+                                    {% empty %}
+                                        <span class="muted">Sin aulas</span>
+                                    {% endfor %}
+                                </td>
                                 <td>
                                     {% for grado in profesor.grados.all %}
                                         <span class="tag">{{ grado.codigo_grado }}</span>

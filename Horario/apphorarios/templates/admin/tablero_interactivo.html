@@ -1,0 +1,470 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    :root {
+        --bg-color: #f3f4f6;
+        --card-bg: rgba(255, 255, 255, 0.8);
+        --glass-border: rgba(255, 255, 255, 0.3);
+        --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+        --text-main: #1f2937;
+        --text-muted: #6b7280;
+        --primary: #4f46e5;
+        --danger: #ef4444;
+    }
+
+    body {
+        font-family: 'Inter', sans-serif;
+        background-color: var(--bg-color);
+        color: var(--text-main);
+        margin: 0;
+    }
+
+    .board-container {
+        display: flex;
+        flex-direction: column;
+        height: 85vh;
+        gap: 1.5rem;
+        padding: 1.5rem;
+    }
+
+    .top-controls {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: var(--card-bg);
+        backdrop-filter: blur(10px);
+        padding: 1rem 2rem;
+        border-radius: 16px;
+        box-shadow: var(--glass-shadow);
+        border: 1px solid var(--glass-border);
+    }
+
+    .top-controls h2 {
+        margin: 0;
+        font-weight: 700;
+        font-size: 1.5rem;
+        color: var(--primary);
+    }
+
+    .view-toggles select {
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        border: 1px solid #d1d5db;
+        font-family: 'Inter', sans-serif;
+        font-weight: 500;
+        outline: none;
+    }
+
+    .main-area {
+        display: flex;
+        flex: 1;
+        gap: 1.5rem;
+        overflow: hidden;
+    }
+
+    /* Grid Area */
+    .grid-wrapper {
+        flex: 3;
+        background: var(--card-bg);
+        backdrop-filter: blur(10px);
+        border-radius: 16px;
+        box-shadow: var(--glass-shadow);
+        border: 1px solid var(--glass-border);
+        overflow: auto;
+        padding: 1rem;
+    }
+
+    table.schedule-grid {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 4px;
+    }
+
+    th, td {
+        padding: 0.5rem;
+        text-align: center;
+        border-radius: 8px;
+        min-width: 100px;
+    }
+
+    th {
+        background-color: #e5e7eb;
+        color: var(--text-muted);
+        font-weight: 600;
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+
+    .row-header {
+        position: sticky;
+        left: 0;
+        background-color: #e5e7eb;
+        z-index: 10;
+    }
+
+    td.cell-dropzone {
+        background-color: rgba(255, 255, 255, 0.5);
+        border: 2px dashed #d1d5db;
+        height: 70px;
+        transition: all 0.2s ease;
+        position: relative;
+    }
+
+    td.cell-dropzone.drag-over {
+        background-color: rgba(79, 70, 229, 0.1);
+        border-color: var(--primary);
+    }
+
+    /* Fichas Area */
+    .fichas-panel {
+        flex: 1;
+        background: var(--card-bg);
+        backdrop-filter: blur(10px);
+        border-radius: 16px;
+        box-shadow: var(--glass-shadow);
+        border: 1px solid var(--glass-border);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .fichas-header {
+        padding: 1rem;
+        background: rgba(255, 255, 255, 0.5);
+        border-bottom: 1px solid var(--glass-border);
+        font-weight: 600;
+    }
+
+    .fichas-list {
+        padding: 1rem;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    /* Cards */
+    .ficha-card {
+        background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.4) 100%);
+        border-radius: 10px;
+        padding: 0.75rem;
+        cursor: grab;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        border-left: 5px solid var(--primary);
+        transition: transform 0.2s, box-shadow 0.2s;
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        position: relative;
+    }
+
+    .ficha-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    .ficha-card:active {
+        cursor: grabbing;
+    }
+
+    .ficha-card.in-grid {
+        cursor: pointer;
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        box-sizing: border-box;
+        border-left-width: 4px;
+        padding: 0.5rem;
+    }
+
+    .card-title {
+        font-weight: 700;
+        font-size: 0.9rem;
+    }
+
+    .card-subtitle {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .card-count {
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        background: var(--primary);
+        color: white;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: bold;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    /* Toast */
+    .toast-container {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .toast {
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        background: white;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        font-weight: 500;
+        animation: slideIn 0.3s ease forwards;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .toast.error { border-left: 4px solid var(--danger); }
+    .toast.success { border-left: 4px solid #10b981; }
+
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+</style>
+
+<div id="app" class="board-container">
+    <div class="top-controls">
+        <h2>Tablero de Horarios (Drag & Drop)</h2>
+        <div class="view-toggles">
+            <select v-model="currentView">
+                <option value="grados">Vista por Grados</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="main-area">
+        <!-- Cuadrícula -->
+        <div class="grid-wrapper">
+            <table class="schedule-grid" v-if="currentView === 'grados'">
+                <thead>
+                    <tr>
+                        <th class="row-header">Grado \ Horario</th>
+                        <template v-for="dia in dias" :key="dia">
+                            <th v-for="hora in horas" :key="dia + hora.id">
+                                [[ dia ]] <br> [[ hora.hora_inicio.substring(0,5) ]]
+                            </th>
+                        </template>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="grado in grados" :key="grado.id">
+                        <th class="row-header">[[ grado.nombre ]]</th>
+                        <template v-for="dia in dias" :key="dia">
+                            <td v-for="hora in horas" :key="dia + hora.id" 
+                                class="cell-dropzone" 
+                                @dragover.prevent="onDragOver" 
+                                @dragleave.prevent="onDragLeave"
+                                @drop="onDrop($event, grado.id, dia, hora.id)">
+                                
+                                <!-- Renderizar ficha si existe en esta celda -->
+                                <div v-if="getAsignacion(grado.id, dia, hora.id)" 
+                                     class="ficha-card in-grid"
+                                     :style="{ borderColor: getAsignacion(grado.id, dia, hora.id).ficha.asignatura__color }"
+                                     @click="removerAsignacion(getAsignacion(grado.id, dia, hora.id).id)"
+                                     title="Clic para remover">
+                                     <div class="card-title">[[ getAsignacion(grado.id, dia, hora.id).ficha.asignatura__abreviatura || getAsignacion(grado.id, dia, hora.id).ficha.asignatura__nombre ]]</div>
+                                     <div class="card-subtitle">
+                                         <span>[[ getAsignacion(grado.id, dia, hora.id).ficha.profesor__abreviatura || getAsignacion(grado.id, dia, hora.id).ficha.profesor__primer_nombre ]]</span>
+                                     </div>
+                                </div>
+                            </td>
+                        </template>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Panel de Fichas No Asignadas -->
+        <div class="fichas-panel">
+            <div class="fichas-header">
+                Fichas Pendientes ([[ fichasAgrupadas.length ]])
+            </div>
+            <div class="fichas-list">
+                <div v-for="ficha in fichasAgrupadas" :key="ficha.id" 
+                     class="ficha-card"
+                     :style="{ borderColor: ficha.asignatura__color }"
+                     draggable="true" 
+                     @dragstart="onDragStart($event, ficha)">
+                    
+                    <div class="card-count" v-if="ficha.pendientes > 1">[[ ficha.pendientes ]]</div>
+                    <div class="card-title">[[ ficha.asignatura__nombre ]]</div>
+                    <div class="card-subtitle">
+                        <span>[[ ficha.profesor__primer_nombre ]]</span>
+                        <span>Grado: [[ ficha.grado__nombre ]]</span>
+                    </div>
+                </div>
+                <div v-if="fichasAgrupadas.length === 0" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                    Todas las fichas han sido asignadas.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toasts -->
+    <div class="toast-container">
+        <div v-for="toast in toasts" :key="toast.id" :class="['toast', toast.type]">
+            <span v-if="toast.type === 'error'">⚠️</span>
+            <span v-if="toast.type === 'success'">✅</span>
+            [[ toast.message ]]
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script>
+    const { createApp } = Vue;
+
+    createApp({
+        delimiters: ['[[', ']]'], // Evitar conflicto con Jinja2 de Django
+        data() {
+            return {
+                grados: [],
+                horas: [],
+                aulas: [],
+                fichas: [],
+                asignadas: [],
+                dias: [],
+                currentView: 'grados',
+                toasts: [],
+                toastCounter: 0
+            }
+        },
+        computed: {
+            fichasAgrupadas() {
+                // Filtramos las fichas para ver cuántas horas le faltan por asignar
+                return this.fichas.map(ficha => {
+                    const asignadasCount = this.asignadas.filter(a => a.ficha_id === ficha.id).length;
+                    const pendientes = ficha.horas_totales - asignadasCount;
+                    return { ...ficha, pendientes };
+                }).filter(ficha => ficha.pendientes > 0);
+            }
+        },
+        mounted() {
+            this.loadData();
+        },
+        methods: {
+            showToast(message, type = 'error') {
+                const id = this.toastCounter++;
+                this.toasts.push({ id, message, type });
+                setTimeout(() => {
+                    this.toasts = this.toasts.filter(t => t.id !== id);
+                }, 4000);
+            },
+            async loadData() {
+                try {
+                    const res = await axios.get('/api/fichas/data/');
+                    this.grados = res.data.grados;
+                    this.horas = res.data.horas;
+                    this.aulas = res.data.aulas;
+                    this.fichas = res.data.fichas;
+                    this.asignadas = res.data.asignadas;
+                    this.dias = res.data.dias;
+                } catch (error) {
+                    this.showToast('Error cargando datos del servidor.');
+                }
+            },
+            getAsignacion(gradoId, dia, horaId) {
+                // Encuentra si hay una asignación en esta celda
+                const asignacion = this.asignadas.find(a => {
+                    const ficha = this.fichas.find(f => f.id === a.ficha_id);
+                    return ficha && ficha.grado__id === gradoId && a.dia === dia && a.hora_id === horaId;
+                });
+                if (asignacion) {
+                    return {
+                        ...asignacion,
+                        ficha: this.fichas.find(f => f.id === asignacion.ficha_id)
+                    };
+                }
+                return null;
+            },
+            onDragStart(event, ficha) {
+                event.dataTransfer.setData('ficha_id', ficha.id);
+                event.dataTransfer.setData('grado_id', ficha.grado__id); // Validar drop
+                event.dataTransfer.effectAllowed = 'move';
+            },
+            onDragOver(event) {
+                event.currentTarget.classList.add('drag-over');
+            },
+            onDragLeave(event) {
+                event.currentTarget.classList.remove('drag-over');
+            },
+            async onDrop(event, targetGradoId, dia, horaId) {
+                event.currentTarget.classList.remove('drag-over');
+                const fichaId = event.dataTransfer.getData('ficha_id');
+                const fichaGradoId = parseInt(event.dataTransfer.getData('grado_id'));
+                
+                if (!fichaId) return;
+
+                // Validación simple en Frontend: Sólo puedes soltar en la fila del grado correspondiente
+                if (fichaGradoId !== targetGradoId) {
+                    this.showToast('Esta ficha pertenece a otro grado.');
+                    return;
+                }
+
+                // Asignar primera aula disponible por defecto (o aula_base si está implementado después)
+                const aulaId = this.aulas.length > 0 ? this.aulas[0].id : null;
+                if (!aulaId) {
+                    this.showToast('No hay aulas configuradas.');
+                    return;
+                }
+
+                try {
+                    const res = await axios.post('/api/fichas/asignar/', {
+                        ficha_id: fichaId,
+                        dia: dia,
+                        hora_id: horaId,
+                        aula_id: aulaId
+                    });
+                    
+                    if (res.data.success) {
+                        this.loadData(); // Recargar datos para que se vea reflejado
+                        this.showToast('Ficha asignada.', 'success');
+                    } else {
+                        this.showToast(res.data.error); // Error de validación (choque de horario)
+                    }
+                } catch (error) {
+                    this.showToast('Error en el servidor al asignar la ficha.');
+                }
+            },
+            async removerAsignacion(asignacionId) {
+                if(!confirm("¿Remover esta clase del horario?")) return;
+                
+                try {
+                    const res = await axios.post('/api/fichas/desasignar/', {
+                        asignacion_id: asignacionId
+                    });
+                    if (res.data.success) {
+                        this.loadData();
+                    }
+                } catch (error) {
+                    this.showToast('Error removiendo la ficha.');
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

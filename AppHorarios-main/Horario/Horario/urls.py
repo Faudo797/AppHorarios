@@ -27,6 +27,7 @@ urlpatterns = [
     path('horario/', login_required(views.horario_view), name='horario_view'),
     path('dashboard/', login_required(views.dashboard_view), name='dashboard'),
     path('admin-dashboard/', login_required(views.admin_dashboard), name='admin_dashboard'),
+    path('panel/', login_required(views.admin_dashboard), name='panel_dashboard'),
     # Gestión de estudiantes y profesores
     path('panel/estudiantes/', login_required(views.gestionar_estudiantes), name='gestionar_estudiantes'),
     path('panel/estudiantes/eliminar/<int:estudiante_id>/', login_required(views.eliminar_estudiante), name='eliminar_estudiante'),
@@ -48,12 +49,7 @@ urlpatterns = [
     path('panel/horas/editar/<int:hora_id>/', login_required(views.editar_hora), name='editar_hora'),
     # Nuevas rutas para Clases y Ver Horarios
     path('panel/clases/', login_required(views.gestionar_clases), name='gestionar_clases'),
-    path('panel/clases/eliminar/<int:clase_id>/', login_required(views.eliminar_clase), name='eliminar_clase'),
-    path('panel/clases/editar/<int:clase_id>/', login_required(views.editar_clase), name='editar_clase'),
     path('panel/ver-horarios/', login_required(views.ver_horarios), name='ver_horarios'),
-    # Rutas para exportar horarios
-    path('horario/exportar/pdf/', login_required(views.exportar_horario_pdf), name='exportar_horario_pdf'),
-    path('horario/exportar/excel/', login_required(views.exportar_horario_excel), name='exportar_horario_excel'),
     # Rutas existentes
     path('estudiantes/', login_required(views.lista_estudiantes), name='lista_estudiantes'),
     path('profesores/', login_required(views.lista_profesores), name='lista_profesores'),
@@ -62,4 +58,41 @@ urlpatterns = [
     path('asignaturas/', login_required(views.lista_asignaturas), name='lista_asignaturas'),
     path('horas/', login_required(views.lista_horas), name='lista_horas'),
     path('grados/', login_required(views.lista_grados), name='lista_grados'),
+
+    # Tablero Interactivo y aSc
+    path('panel/tablero/', login_required(views.tablero_interactivo_view), name='tablero_interactivo'),
+    path('panel/especificacion/', login_required(views.asc_especificacion_view), name='asc_especificacion'),
+    path('api/fichas/data/', login_required(views.api_get_tablero_data), name='api_get_tablero_data'),
+    path('api/fichas/asignar/', login_required(views.api_asignar_ficha), name='api_asignar_ficha'),
+    path('api/fichas/desasignar/', login_required(views.api_desasignar_ficha), name='api_desasignar_ficha'),
+    path('api/fichas/generar/', login_required(views.api_generar_horario_automatico), name='api_generar_horario_automatico'),
+    path('panel/horario-individual/', login_required(views.horario_impresion_view), name='horario_impresion'),
+    
+    # Nuevas APIs CRUD para la vista aSc Especificación
+    path('api/asignaturas/', login_required(views.api_get_asignaturas), name='api_get_asignaturas'),
+    path('api/asignaturas/guardar/', login_required(views.api_guardar_asignatura), name='api_guardar_asignatura'),
+    path('api/asignaturas/eliminar/<int:id>/', login_required(views.api_eliminar_asignatura), name='api_eliminar_asignatura'),
+    
+    path('api/profesores/', login_required(views.api_get_profesores), name='api_get_profesores'),
+    path('api/profesores/guardar/', login_required(views.api_guardar_profesor), name='api_guardar_profesor'),
+    path('api/profesores/eliminar/<int:id>/', login_required(views.api_eliminar_profesor), name='api_eliminar_profesor'),
+
+    path('api/grados/', login_required(views.api_get_grados), name='api_get_grados'),
+    path('api/grados/guardar/', login_required(views.api_guardar_grado), name='api_guardar_grado'),
+    path('api/grados/eliminar/<int:id>/', login_required(views.api_eliminar_grado), name='api_eliminar_grado'),
+
+    path('api/aulas/', login_required(views.api_get_aulas), name='api_get_aulas'),
+    path('api/aulas/guardar/', login_required(views.api_guardar_aula), name='api_guardar_aula'),
+    path('api/aulas/eliminar/<int:id>/', login_required(views.api_eliminar_aula), name='api_eliminar_aula'),
+
+    path('api/fichas/guardar/', login_required(views.api_guardar_ficha), name='api_guardar_ficha'),
+    path('api/fichas/eliminar/<int:id>/', login_required(views.api_eliminar_ficha), name='api_eliminar_ficha'),
+    
+    path('api/horario/limpiar/', login_required(views.api_limpiar_horario), name='api_limpiar_horario'),
+    path('api/horario/individual/', login_required(views.api_get_horario_individual), name='api_get_horario_individual'),
+    
+    # Configuracion Colegio y Horas
+    path('api/configuracion/', login_required(views.api_colegio_config), name='api_colegio_config'),
+    path('api/horas/guardar/', login_required(views.api_guardar_hora), name='api_guardar_hora'),
+    path('api/horas/eliminar/<int:id>/', login_required(views.api_eliminar_hora), name='api_eliminar_hora'),
 ]

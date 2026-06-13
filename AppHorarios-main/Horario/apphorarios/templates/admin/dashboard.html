@@ -1,88 +1,131 @@
-{% extends 'admin/base_admin.html' %}
+{% extends 'admin/layout_asc.html' %}
 
-{% block title %}Panel administrativo | EduSchedule{% endblock %}
-{% block admin_title %}Centro de control de horarios{% endblock %}
-{% block admin_subtitle %}
-    Crea primero la informacion base y luego arma el horario semanal sin cruces entre aulas,
-    profesores ni grados.
+{% block extra_css %}
+<style>
+    .welcome-banner {
+        background: linear-gradient(135deg, var(--asc-blue) 0%, #004578 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 8px;
+        margin: 2rem;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .welcome-banner h1 {
+        margin-top: 0;
+        font-weight: 400;
+        font-size: 2rem;
+    }
+    
+    .steps-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1.5rem;
+        padding: 0 2rem 2rem 2rem;
+    }
+    
+    .step-card {
+        background: white;
+        border: 1px solid var(--asc-border);
+        border-radius: 4px;
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+        text-decoration: none;
+        color: var(--asc-text);
+    }
+    
+    .step-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        border-color: var(--asc-light-blue);
+    }
+    
+    .step-icon {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        background-color: #F3F2F1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: var(--asc-blue);
+        margin-bottom: 1rem;
+    }
+    
+    .step-card:hover .step-icon {
+        background-color: var(--asc-light-blue);
+        color: white;
+    }
+    
+    .step-title {
+        font-weight: 600;
+        font-size: 1.1rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .step-desc {
+        font-size: 0.85rem;
+        color: #605E5C;
+    }
+</style>
+{% endblock %}
+
+{% block sidebar %}
+<!-- Ocultar el sidebar en el dashboard principal para que parezca aSc -->
 {% endblock %}
 
 {% block content %}
-    <section class="panel-card mb-4">
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
-            <div>
-                <h2 class="section-title">Resumen general</h2>
-                <p class="section-subtitle mb-0">Estas cifras te muestran el estado del sistema antes de seguir con la planeacion academica.</p>
-            </div>
-            <div class="hero-actions">
-                <a href="{% url 'gestionar_clases' %}" class="btn btn-brand">Programar clases</a>
-                <a href="{% url 'ver_horarios' %}" class="btn btn-soft">Revisar horarios</a>
-            </div>
-        </div>
+<div class="welcome-banner">
+    <h1>Bienvenido a aSc TimeTables</h1>
+    <p>Sigue los pasos a continuación para ingresar los datos de tu institución y generar tu horario.</p>
+</div>
 
-        <div class="metric-grid mt-4">
-            {% for metric in metrics %}
-                <article class="stat-card">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <h3>{{ metric.label }}</h3>
-                            <strong>{{ metric.value }}</strong>
-                            <p>Registros creados en el sistema.</p>
-                        </div>
-                        <span class="tag"><i class="fa-solid {{ metric.icon }}"></i></span>
-                    </div>
-                </article>
-            {% endfor %}
-        </div>
-    </section>
+<div class="steps-grid">
+    <a href="{% url 'asc_especificacion' %}#colegio" class="step-card">
+        <div class="step-icon"><i class="fa-solid fa-school"></i></div>
+        <div class="step-title">1. Colegio</div>
+        <div class="step-desc">Configura los días, periodos y timbres de la escuela.</div>
+    </a>
+    
+    <a href="{% url 'asc_especificacion' %}#asignaturas" class="step-card">
+        <div class="step-icon"><i class="fa-solid fa-book"></i></div>
+        <div class="step-title">2. Asignaturas</div>
+        <div class="step-desc">Agrega las materias que se dictarán y asígnales un color.</div>
+    </a>
+    
+    <a href="{% url 'asc_especificacion' %}#grados" class="step-card">
+        <div class="step-icon"><i class="fa-solid fa-users"></i></div>
+        <div class="step-title">3. Clases / Grados</div>
+        <div class="step-desc">Define los grupos de estudiantes que recibirán las clases.</div>
+    </a>
+    
+    <a href="{% url 'asc_especificacion' %}#aulas" class="step-card">
+        <div class="step-icon"><i class="fa-solid fa-door-open"></i></div>
+        <div class="step-title">4. Aulas</div>
+        <div class="step-desc">Añade los espacios físicos donde se dictarán las clases.</div>
+    </a>
+    
+    <a href="{% url 'asc_especificacion' %}#profesores" class="step-card">
+        <div class="step-icon"><i class="fa-solid fa-chalkboard-user"></i></div>
+        <div class="step-title">5. Profesores</div>
+        <div class="step-desc">Registra a los docentes y configura su disponibilidad.</div>
+    </a>
+    
+    <a href="{% url 'asc_especificacion' %}#lecciones" class="step-card">
+        <div class="step-icon"><i class="fa-solid fa-clipboard-list"></i></div>
+        <div class="step-title">6. Lecciones (Contratos)</div>
+        <div class="step-desc">Une Profesor + Materia + Grado e indica las horas semanales.</div>
+    </a>
 
-    <div class="card-grid">
-        <section class="panel-card">
-            <h2 class="section-title">Ruta sugerida de trabajo</h2>
-            <p class="section-subtitle">Si vas a poblar el sistema desde cero, este orden evita retrabajo.</p>
-            <div class="empty-state">
-                <strong>1.</strong> Crea grados, aulas, asignaturas y bloques horarios.<br>
-                <strong>2.</strong> Registra profesores y vincula sus grados.<br>
-                <strong>3.</strong> Registra estudiantes y asignales su grado.<br>
-                <strong>4.</strong> Programa las clases y revisa el horario resultante.
-            </div>
-        </section>
-
-        <section class="panel-card">
-            <h2 class="section-title">Pendientes detectados</h2>
-            <p class="section-subtitle">Indicadores utiles para validar si la informacion base esta completa.</p>
-            <div class="d-grid gap-3">
-                {% for item in pending_items %}
-                    <div class="summary-card">
-                        <h3>{{ item.label }}</h3>
-                        <strong>{{ item.value }}</strong>
-                        <p>{% if item.value %}Conviene revisarlo antes de cargar mas clases.{% else %}Sin pendientes en esta categoria.{% endif %}</p>
-                    </div>
-                {% endfor %}
-            </div>
-        </section>
-    </div>
-
-    <section class="panel-card mt-4">
-        <h2 class="section-title">Accesos rapidos</h2>
-        <p class="section-subtitle">Atajos para los modulos que vas a usar con mayor frecuencia durante el desarrollo.</p>
-        <div class="card-grid">
-            <a href="{% url 'gestionar_estudiantes' %}" class="summary-card">
-                <h3>Estudiantes</h3>
-                <p>Crea registros, corrige datos y genera usuarios de acceso.</p>
-            </a>
-            <a href="{% url 'gestionar_profesores' %}" class="summary-card">
-                <h3>Profesores</h3>
-                <p>Asigna materia principal, grados asociados y cuenta de ingreso.</p>
-            </a>
-            <a href="{% url 'gestionar_clases' %}" class="summary-card">
-                <h3>Clases</h3>
-                <p>Programa sesiones por grado, hora, aula y docente.</p>
-            </a>
-            <a href="{% url 'ver_horarios' %}" class="summary-card">
-                <h3>Consulta de horarios</h3>
-                <p>Verifica rapidamente el resultado final por estudiante o profesor.</p>
-            </a>
-        </div>
-    </section>
+    <a href="{% url 'tablero_interactivo' %}" class="step-card" style="border-color: var(--asc-light-blue); background-color: #F8FBFD;">
+        <div class="step-icon" style="background-color: var(--asc-blue); color: white;"><i class="fa-solid fa-table-cells"></i></div>
+        <div class="step-title">7. Generar Horario</div>
+        <div class="step-desc">Usa el tablero interactivo para arrastrar y organizar.</div>
+    </a>
+</div>
 {% endblock %}

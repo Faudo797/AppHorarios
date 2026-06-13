@@ -57,4 +57,10 @@ urlpatterns = [
     path('asignaturas/', login_required(views.lista_asignaturas), name='lista_asignaturas'),
     path('horas/', login_required(views.lista_horas), name='lista_horas'),
     path('grados/', login_required(views.lista_grados), name='lista_grados'),
+
+    # Tablero Interactivo
+    path('panel/tablero/', login_required(views.tablero_interactivo_view), name='tablero_interactivo'),
+    path('api/fichas/data/', login_required(views.api_get_tablero_data), name='api_get_tablero_data'),
+    path('api/fichas/asignar/', login_required(views.api_asignar_ficha), name='api_asignar_ficha'),
+    path('api/fichas/desasignar/', login_required(views.api_desasignar_ficha), name='api_desasignar_ficha'),
 ]

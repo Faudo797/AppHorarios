@@ -8,7 +8,8 @@ from .models import (
     Aula,
     Estudiante,
     Profesor,
-    Clase,
+    Ficha,
+    FichaAsignada,
     Asignatura,
     Hora,
     Grado
@@ -93,8 +94,8 @@ class ProfesorAdminForm(forms.ModelForm):
 @admin.register(Profesor)
 class ProfesorAdmin(admin.ModelAdmin):
     form = ProfesorAdminForm
-    list_display = ('primer_nombre', 'primer_apellido', 'asignatura')
-    filter_horizontal = ('grados',)
+    list_display = ('primer_nombre', 'primer_apellido')
+    filter_horizontal = ('asignaturas',)
 
     def save_model(self, request, obj, form, change):
         contraseña = form.cleaned_data.get('contraseña')
@@ -116,7 +117,8 @@ class ProfesorAdmin(admin.ModelAdmin):
 # Resto de modelos
 # ======================
 admin.site.register(Aula)
-admin.site.register(Clase)
+admin.site.register(Ficha)
+admin.site.register(FichaAsignada)
 admin.site.register(Asignatura)
 admin.site.register(Hora)
 admin.site.register(Grado)

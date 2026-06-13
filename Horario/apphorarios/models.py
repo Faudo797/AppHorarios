@@ -28,6 +28,8 @@ class Administrador(models.Model):
 class Asignatura(models.Model):
     codigo_asignatura = models.CharField(max_length=10, unique=True)
     nombre = models.CharField(max_length=100, default='Sin nombre')
+    abreviatura = models.CharField(max_length=10, default='', blank=True)
+    color = models.CharField(max_length=7, default='#FFFFFF', help_text="Color en formato HEX (ej. #FF5733)")
 
     def __str__(self):
         return self.nombre
@@ -44,6 +46,7 @@ class Hora(models.Model):
 class Grado(models.Model):
     codigo_grado = models.CharField(max_length=10, unique=True)
     nombre = models.CharField(max_length=100)  # Sin choices, para que sea libre
+    aula_base = models.ForeignKey('Aula', on_delete=models.SET_NULL, null=True, blank=True, related_name='grados_base', help_text="Aula principal para este grado")
 
     def __str__(self):
         return self.nombre
@@ -80,6 +83,7 @@ class Profesor(models.Model):
     segundo_nombre = models.CharField(max_length=100, blank=True, null=True)
     primer_apellido = models.CharField(max_length=100, default='Apellido')
     segundo_apellido = models.CharField(max_length=100, blank=True, null=True)
+    abreviatura = models.CharField(max_length=10, default='', blank=True, help_text="Ej. JP para Juan Pérez")
     asignatura = models.ForeignKey('Asignatura', on_delete=models.CASCADE, related_name='profesores')
     grados = models.ManyToManyField('Grado', related_name='profesores', blank=True)
     usuario = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True, related_name='profesor_perfil')
@@ -87,14 +91,7 @@ class Profesor(models.Model):
     def __str__(self):
         return f"{self.primer_nombre} {self.primer_apellido}"
 
-
-
-class Clase(models.Model):
-    descripcion_clase = models.CharField(max_length=100, default='Clase sin descripción')
-    profesor = models.ForeignKey(Profesor, on_delete=models.CASCADE, related_name='clases')
-    aula = models.ForeignKey(Aula, on_delete=models.CASCADE, related_name='clases')
-    hora = models.ForeignKey(Hora, on_delete=models.CASCADE, related_name='clases')
-
+class DisponibilidadProfesor(models.Model):
     DIAS_SEMANA = [
         ('LU', 'Lunes'),
         ('MA', 'Martes'),
@@ -102,18 +99,47 @@ class Clase(models.Model):
         ('JU', 'Jueves'),
         ('VI', 'Viernes'),
     ]
-    dia = models.CharField(max_length=2, choices=DIAS_SEMANA, default='LU')
+    profesor = models.ForeignKey(Profesor, on_delete=models.CASCADE, related_name='disponibilidades')
+    dia = models.CharField(max_length=2, choices=DIAS_SEMANA)
+    hora = models.ForeignKey('Hora', on_delete=models.CASCADE)
+    disponible = models.BooleanField(default=True)
 
-    grado = models.ForeignKey(Grado, on_delete=models.CASCADE, related_name='clases')
-
-    def estudiantes_asociados(self):
-        return self.grado.estudiantes.all()
+    class Meta:
+        unique_together = ['profesor', 'dia', 'hora']
 
     def __str__(self):
-        return f"{self.descripcion_clase}"
+        estado = "Disponible" if self.disponible else "No Disponible"
+        return f"{self.profesor} - {self.get_dia_display()} {self.hora}: {estado}"
+
+
+
+class Ficha(models.Model):
+    descripcion_ficha = models.CharField(max_length=100, default='Ficha sin descripción')
+    profesor = models.ForeignKey(Profesor, on_delete=models.CASCADE, related_name='fichas')
+    asignatura = models.ForeignKey(Asignatura, on_delete=models.CASCADE, related_name='fichas')
+    grado = models.ForeignKey(Grado, on_delete=models.CASCADE, related_name='fichas')
+    horas_totales = models.IntegerField(default=1, help_text="Cantidad de horas a la semana")
+
+    def __str__(self):
+        return f"{self.asignatura.abreviatura or self.asignatura.nombre} - {self.profesor.abreviatura or self.profesor.primer_nombre} ({self.grado.nombre})"
+
+class FichaAsignada(models.Model):
+    DIAS_SEMANA = [
+        ('LU', 'Lunes'),
+        ('MA', 'Martes'),
+        ('MI', 'Miércoles'),
+        ('JU', 'Jueves'),
+        ('VI', 'Viernes'),
+    ]
+    ficha = models.ForeignKey(Ficha, on_delete=models.CASCADE, related_name='asignaciones')
+    dia = models.CharField(max_length=2, choices=DIAS_SEMANA, default='LU')
+    hora = models.ForeignKey(Hora, on_delete=models.CASCADE, related_name='fichas_asignadas')
+    aula = models.ForeignKey(Aula, on_delete=models.CASCADE, related_name='fichas_asignadas')
 
     class Meta:
         unique_together = [
             ('aula', 'hora', 'dia'),
-            ('profesor', 'hora', 'dia'),
         ]
+
+    def __str__(self):
+        return f"{self.ficha} -> {self.dia} {self.hora}"
