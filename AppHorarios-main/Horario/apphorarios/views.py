@@ -87,53 +87,38 @@ class FichaAsignadaForm(forms.ModelForm):
 
 
 def login_view(request):
-
     if request.method == 'POST':
-
         form = LoginForm(request, data=request.POST)
-
         if form.is_valid():
-
             username = form.cleaned_data.get('username')
-
             password = form.cleaned_data.get('password')
-
             tipo_usuario = form.cleaned_data.get('tipo_usuario')
-
             user = authenticate(username=username, password=password)
-
             
-
-            if user is not None and user.rol == tipo_usuario:
-
-                login(request, user)
-
-                messages.success(request, f'Â¡Bienvenido {username}!')
-
-                
-
-                # Redirigir segÃºn el tipo de usuario
-
-                if user.rol == 'admin':
-
+            if user is not None:
+                # 🚀 ACCESO DIRECTO SI ES SUPERUSUARIO O MIEMBRO DEL STAFF
+                if user.is_superuser or user.is_staff:
+                    login(request, user)
+                    messages.success(request, f'¡Bienvenido Administrador {username}!')
                     return redirect('admin_dashboard')
-
+                
+                # Lógica normal para los usuarios de la institución escolar
+                elif user.rol == tipo_usuario:
+                    login(request, user)
+                    messages.success(request, f'¡Bienvenido {username}!')
+                    
+                    if user.rol == 'admin':
+                        return redirect('admin_dashboard')
+                    else:
+                        return redirect('horario_view')
                 else:
-
-                    return redirect('horario_view')
-
+                    messages.error(request, 'Usuario o contraseña incorrectos.')
             else:
-
-                messages.error(request, 'Usuario o contraseÃ±a incorrectos.')
-
+                messages.error(request, 'Usuario o contraseña incorrectos.')
         else:
-
-            messages.error(request, 'Usuario o contraseÃ±a incorrectos.')
-
+            messages.error(request, 'Usuario o contraseña incorrectos.')
     else:
-
         form = LoginForm()
-
     return render(request, 'login.html', {'form': form})
 
 
