@@ -1073,7 +1073,7 @@ def api_get_tablero_data(request):
 
     
 
-    grados = list(Grado.objects.values('id', 'nombre'))
+    grados = list(Grado.objects.values('id', 'nombre').order_by('id'))
 
     horas = list(Hora.objects.values('id', 'hora_inicio', 'hora_fin').order_by('hora_inicio'))
 
