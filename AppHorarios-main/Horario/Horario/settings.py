@@ -96,3 +96,4 @@ PERMISSION_REQUIRED_MIXIN = {
     'login_url': 'login',
     'redirect_field_name': 'next',
 }
+STATIC_ROOT = BASE_DIR / "staticfiles"
