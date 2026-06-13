@@ -198,7 +198,21 @@ def generar_horario(iteraciones=10, estrategia='2-2'):
         duracion = b['duracion']
         asignado = False
 
-        for dia in domain_dias:
+        # Ordenar los días para intentar primero los días con MENOS horas de esta ficha (balanceo)
+        def count_ficha_in_dia(dia_check):
+            count = 0
+            for h_check in domain_horas:
+                key_check = (dia_check, h_check)
+                if key_check in grid_actual:
+                    for asig in grid_actual[key_check]:
+                        if asig['ficha'].id == ficha_actual.id:
+                            count += 1
+            return count
+
+        dias_ordenados = list(domain_dias)
+        dias_ordenados.sort(key=count_ficha_in_dia)
+
+        for dia in dias_ordenados:
             if asignado: break
             for idx_h, hora_id in enumerate(domain_horas):
                 if asignado: break
