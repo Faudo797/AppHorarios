@@ -298,27 +298,19 @@ def horario_view(request):
 
 
 def admin_dashboard(request):
-
-    if request.user.rol != 'admin':
-
-        messages.error(request, 'No tienes permisos para acceder a esta pÃ¡gina.')
-
-        return redirect('login')
-
+    # 🚀 EXCEPCIÓN: Si es superusuario o staff, o si tiene el rol de admin, lo dejamos pasar
+    if request.user.is_superuser or request.user.is_staff or request.user.rol == 'admin':
+        context = {
+            'year': '2025',
+            'period': '1',
+            'institution_name': 'INSTITUCIÓN EDUCATIVA DEMO'
+        }
+        return render(request, 'admin/dashboard.html', context)
     
-
-    context = {
-
-        'year': '2025',
-
-        'period': '1',
-
-        'institution_name': 'INSTITUCIÃN EDUCATIVA DEMO'
-
-    }
-
-    return render(request, 'admin/dashboard.html', context)
-
+    # Si no cumple ninguna, se le deniega el acceso
+    else:
+        messages.error(request, 'No tienes permisos para acceder a esta página.')
+        return redirect('login')
 
 
 def dashboard_view(request):
