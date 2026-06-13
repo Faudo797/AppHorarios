@@ -140,6 +140,23 @@ def generar_horario(iteraciones=10, estrategia='2-2'):
                 if asig['aula_id'] == aula_id:
                     return False
                     
+        # Limitar la cantidad de veces que esta materia se dicta en este mismo día
+        veces_en_dia = 0
+        for h_check in domain_horas:
+            key_check = (dia, h_check)
+            if key_check in grid:
+                for asig in grid[key_check]:
+                    if asig['ficha'].id == ficha.id:
+                        veces_en_dia += 1
+                        
+        # Por defecto, intentar que solo haya 1 sesión (o 1 bloque) por día
+        limite_diario = 1
+        if ficha.horas_totales > len(domain_dias):
+            limite_diario = 2 # Si hay más horas que días en la semana, inevitablemente debe repetir algún día
+            
+        if veces_en_dia >= limite_diario:
+            return False
+            
         # Evitar bloques (horas consecutivas) accidentales para la misma ficha
         # Si la estrategia pide bloques (duracion=2), ambas horas se validan antes de entrar al grid, por lo que esto no las bloquea.
         idx = domain_horas.index(hora_id)
