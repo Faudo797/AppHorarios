@@ -1103,12 +1103,24 @@ def api_get_tablero_data(request):
 
     
 
+    profesores_qs = Profesor.objects.prefetch_related('asignaturas').all()
+    profesores_list = []
+    for p in profesores_qs:
+        profesores_list.append({
+            'id': p.id,
+            'primer_nombre': p.primer_nombre,
+            'primer_apellido': p.primer_apellido,
+            'abreviatura': p.abreviatura,
+            'identificacion': p.identificacion,
+            'asignaturas_str': ', '.join([a.nombre for a in p.asignaturas.all()])
+        })
+
     return JsonResponse({
         'dias': [d[0] for d in FichaAsignada.DIAS_SEMANA],
         'horas': horas,
         'grados': grados,
         'aulas': aulas,
-        'profesores': list(Profesor.objects.values('id', 'primer_nombre', 'primer_apellido', 'abreviatura')),
+        'profesores': profesores_list,
         'asignaturas': list(Asignatura.objects.values('id', 'codigo_asignatura', 'nombre', 'abreviatura', 'color')),
         'fichas': fichas,
         'asignadas': asignadas
