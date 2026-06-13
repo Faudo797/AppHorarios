@@ -87,53 +87,38 @@ class FichaAsignadaForm(forms.ModelForm):
 
 
 def login_view(request):
-
     if request.method == 'POST':
-
         form = LoginForm(request, data=request.POST)
-
         if form.is_valid():
-
             username = form.cleaned_data.get('username')
-
             password = form.cleaned_data.get('password')
-
             tipo_usuario = form.cleaned_data.get('tipo_usuario')
-
             user = authenticate(username=username, password=password)
-
             
-
-            if user is not None and user.rol == tipo_usuario:
-
-                login(request, user)
-
-                messages.success(request, f'Â¡Bienvenido {username}!')
-
-                
-
-                # Redirigir segÃºn el tipo de usuario
-
-                if user.rol == 'admin':
-
+            if user is not None:
+                # 🚀 ACCESO DIRECTO SI ES SUPERUSUARIO O MIEMBRO DEL STAFF
+                if user.is_superuser or user.is_staff:
+                    login(request, user)
+                    messages.success(request, f'¡Bienvenido Administrador {username}!')
                     return redirect('admin_dashboard')
-
+                
+                # Lógica normal para los usuarios de la institución escolar
+                elif user.rol == tipo_usuario:
+                    login(request, user)
+                    messages.success(request, f'¡Bienvenido {username}!')
+                    
+                    if user.rol == 'admin':
+                        return redirect('admin_dashboard')
+                    else:
+                        return redirect('horario_view')
                 else:
-
-                    return redirect('horario_view')
-
+                    messages.error(request, 'Usuario o contraseña incorrectos.')
             else:
-
-                messages.error(request, 'Usuario o contraseÃ±a incorrectos.')
-
+                messages.error(request, 'Usuario o contraseña incorrectos.')
         else:
-
-            messages.error(request, 'Usuario o contraseÃ±a incorrectos.')
-
+            messages.error(request, 'Usuario o contraseña incorrectos.')
     else:
-
         form = LoginForm()
-
     return render(request, 'login.html', {'form': form})
 
 
@@ -313,27 +298,19 @@ def horario_view(request):
 
 
 def admin_dashboard(request):
-
-    if request.user.rol != 'admin':
-
-        messages.error(request, 'No tienes permisos para acceder a esta pÃ¡gina.')
-
-        return redirect('login')
-
+    # 🚀 EXCEPCIÓN: Si es superusuario o staff, o si tiene el rol de admin, lo dejamos pasar
+    if request.user.is_superuser or request.user.is_staff or request.user.rol == 'admin':
+        context = {
+            'year': '2025',
+            'period': '1',
+            'institution_name': 'INSTITUCIÓN EDUCATIVA DEMO'
+        }
+        return render(request, 'admin/dashboard.html', context)
     
-
-    context = {
-
-        'year': '2025',
-
-        'period': '1',
-
-        'institution_name': 'INSTITUCIÃN EDUCATIVA DEMO'
-
-    }
-
-    return render(request, 'admin/dashboard.html', context)
-
+    # Si no cumple ninguna, se le deniega el acceso
+    else:
+        messages.error(request, 'No tienes permisos para acceder a esta página.')
+        return redirect('login')
 
 
 def dashboard_view(request):
