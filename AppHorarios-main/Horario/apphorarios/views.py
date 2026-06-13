@@ -1172,6 +1172,29 @@ def api_asignar_ficha(request):
 
             return JsonResponse({'success': False, 'error': 'El grado ya tiene clase en esa hora.'})
 
+        # Validar consecutividad y límite diario de la asignatura para el grado
+        horas_existentes = FichaAsignada.objects.filter(
+            dia=dia,
+            ficha__grado=ficha.grado,
+            ficha__asignatura=ficha.asignatura
+        ).select_related('hora')
+
+        if horas_existentes.exists():
+            veces_en_dia = horas_existentes.count()
+            if veces_en_dia >= 2:
+                return JsonResponse({'success': False, 'error': 'No puedes asignar más de 2 horas al día de la misma asignatura.'})
+
+            todas_horas = list(Hora.objects.all().order_by('hora_inicio'))
+            todas_horas_ids = [h.id for h in todas_horas]
+            try:
+                idx_nueva = todas_horas_ids.index(int(hora_id))
+                indices_existentes = [todas_horas_ids.index(h.hora.id) for h in horas_existentes]
+                es_consecutiva = any(abs(idx_nueva - idx) == 1 for idx in indices_existentes)
+                if not es_consecutiva:
+                    return JsonResponse({'success': False, 'error': 'Las clases de la misma asignatura en un día deben ser consecutivas.'})
+            except (ValueError, TypeError):
+                pass
+
             
 
         asignacion = FichaAsignada.objects.create(
