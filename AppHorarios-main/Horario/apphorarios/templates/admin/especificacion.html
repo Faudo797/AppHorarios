@@ -228,7 +228,7 @@
                     <td><strong>[[ clase.nombre ]]</strong></td>
                     <td class="action-icons">
                         <i class="fa-solid fa-pen action-icon" @click="abrirModalClase(clase)"></i>
-                        <i class="fa-solid fa-trash action-icon delete"></i>
+                        <i class="fa-solid fa-trash action-icon delete" @click="eliminarClase(clase.id)"></i>
                     </td>
                 </tr>
                 <tr v-if="grados.length === 0">
@@ -260,7 +260,7 @@
                     <td>[[ aula.capacidad || 'N/A' ]]</td>
                     <td class="action-icons">
                         <i class="fa-solid fa-pen action-icon" @click="abrirModalAula(aula)"></i>
-                        <i class="fa-solid fa-trash action-icon delete"></i>
+                        <i class="fa-solid fa-trash action-icon delete" @click="eliminarAula(aula.id)"></i>
                     </td>
                 </tr>
                 <tr v-if="aulas.length === 0">
@@ -412,7 +412,7 @@
                 </div>
                 <div class="form-group">
                     <label>Capacidad</label>
-                    <input type="number" class="form-control" v-model="formData.capacidad">
+                    <input type="number" class="form-control" v-model="formData.capacidad" min="1">
                 </div>
             </div>
             <div class="modal-footer">
@@ -433,18 +433,21 @@
                 <div class="form-group">
                     <label>Profesor</label>
                     <select class="form-control" v-model="formData.profesor_id">
+                        <option :value="null" disabled>Seleccione un Profesor...</option>
                         <option v-for="prof in profesores" :value="prof.id" :key="prof.id">[[ prof.primer_nombre ]] [[ prof.primer_apellido ]]</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label>Asignatura</label>
                     <select class="form-control" v-model="formData.asignatura_id">
+                        <option :value="null" disabled>Seleccione una Asignatura...</option>
                         <option v-for="asig in asignaturas" :value="asig.id" :key="asig.id">[[ asig.nombre ]]</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label>Grado/Clase</label>
                     <select class="form-control" v-model="formData.grado_id">
+                        <option :value="null" disabled>Seleccione una Clase...</option>
                         <option v-for="g in grados" :value="g.id" :key="g.id">[[ g.nombre ]]</option>
                     </select>
                 </div>
@@ -625,10 +628,7 @@
             },
             abrirModalProfesor(profesor) {
                 if(profesor && profesor.id) {
-                    this.formData = { ...profesor, asignaturas: profesor.asignaturas_str ? profesor.asignaturas_str.split(', ') : [] };
-                    // Map string names to IDs (simplified: needs actual ID mapping from list if possible, but let's assume we store IDs or need to fetch them)
-                    // Better approach: ensure backend sends asignaturas as list of IDs. For now, since we only added it as str, let's just clear it if editing to avoid complex mapping in UI
-                    this.formData.asignaturas = []; 
+                    this.formData = { ...profesor, asignaturas: profesor.asignaturas || [] };
                 } else {
                     this.formData = { id: null, codigo_profesor: '', identificacion: '', primer_nombre: '', primer_apellido: '', abreviatura: '', asignaturas: [] };
                 }
@@ -681,6 +681,10 @@
                 this.modales.aula = true;
             },
             async guardarAula() {
+                if (this.formData.capacidad < 1) {
+                    alert("La capacidad del aula debe ser mayor o igual a 1.");
+                    return;
+                }
                 try {
                     await axios.post('/api/aulas/guardar/', this.formData);
                     this.cerrarModal('aula');
@@ -704,6 +708,10 @@
                 this.modales.ficha = true;
             },
             async guardarFicha() {
+                if (this.formData.horas_totales < 1) {
+                    alert("Las horas totales deben ser mayores o iguales a 1.");
+                    return;
+                }
                 try {
                     await axios.post('/api/fichas/guardar/', this.formData);
                     this.cerrarModal('ficha');

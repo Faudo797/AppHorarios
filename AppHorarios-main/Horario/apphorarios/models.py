@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.conf import settings  # Para usar AUTH_USER_MODEL
+from django.core.validators import MinValueValidator
 
 
 class UsuarioPersonalizado(AbstractUser):
@@ -56,7 +57,7 @@ class Grado(models.Model):
 class Aula(models.Model):
     nombre = models.CharField(max_length=50, unique=True)  # este es el 'nombre' del formulario
     abreviatura = models.CharField(max_length=10, blank=True, default='', unique=True)
-    capacidad = models.IntegerField(default=30)  # capacidad máxima predeterminada
+    capacidad = models.IntegerField(default=30, validators=[MinValueValidator(1)])  # capacidad máxima predeterminada
 
     def __str__(self):
         return f"{self.nombre} (Capacidad: {self.capacidad})"
@@ -118,7 +119,7 @@ class Ficha(models.Model):
     profesor = models.ForeignKey(Profesor, on_delete=models.CASCADE, related_name='fichas')
     asignatura = models.ForeignKey(Asignatura, on_delete=models.CASCADE, related_name='fichas')
     grado = models.ForeignKey(Grado, on_delete=models.CASCADE, related_name='fichas')
-    horas_totales = models.IntegerField(default=1, help_text="Cantidad de horas a la semana")
+    horas_totales = models.IntegerField(default=1, validators=[MinValueValidator(1)], help_text="Cantidad de horas a la semana")
 
     def __str__(self):
         return f"{self.asignatura.abreviatura or self.asignatura.nombre} - {self.profesor.abreviatura or self.profesor.primer_nombre} ({self.grado.nombre})"

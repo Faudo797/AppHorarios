@@ -143,10 +143,6 @@ def horario_view(request):
 
 
 
-    print(f"DEBUG: Initial user_rol: {user_rol}, user_obj: {user_obj}")
-
-    print(f"DEBUG: Requested user code: {requested_user_code}, type: {requested_user_type}")
-
 
 
     if request.user.rol == 'admin' and requested_user_code and requested_user_type:
@@ -163,8 +159,6 @@ def horario_view(request):
 
                 user_rol = 'profesor'
 
-                print(f"DEBUG: Admin viewing professor schedule. Profesor profile: {profesor_profile}, User object: {user_obj}")
-
             elif requested_user_type == 'estudiante':
 
                 # Buscar estudiante por codigo_estudiante
@@ -174,8 +168,6 @@ def horario_view(request):
                 user_obj = estudiante_profile.usuario
 
                 user_rol = 'estudiante'
-
-                print(f"DEBUG: Admin viewing student schedule. Estudiante profile: {estudiante_profile}, User object: {user_obj}")
 
             else:
 
@@ -207,10 +199,6 @@ def horario_view(request):
 
 
 
-    print(f"DEBUG: User role for schedule processing: {user_rol}")
-
-    print(f"DEBUG: User object for schedule processing: {user_obj}")
-
 
 
     # Asegurarse de que user_obj tenga un atributo 'profesor_perfil' o 'estudiante_perfil' si el rol lo indica
@@ -221,17 +209,11 @@ def horario_view(request):
 
             profesor_obj = user_obj.profesor_perfil
 
-            print(f"DEBUG: Processing professor: {profesor_obj.primer_nombre} {profesor_obj.primer_apellido}")
-
             clases = FichaAsignada.objects.filter(ficha__profesor=profesor_obj).order_by('hora__hora_inicio', 'dia')
-
-            print(f"DEBUG: Classes found for professor: {clases.count()}")
 
             for clase in clases:
 
                 dia_str = dict(FichaAsignada.DIAS_SEMANA).get(clase.dia)
-
-                print(f"DEBUG: Class: {clase.ficha.descripcion_ficha}, Dia: {dia_str}, Hora: {clase.hora.hora_inicio}, Grado: {clase.ficha.grado.nombre}, Aula: {clase.aula.nombre}")
 
                 if dia_str:
 
@@ -251,17 +233,11 @@ def horario_view(request):
 
             estudiante_obj = user_obj.estudiante_perfil
 
-            print(f"DEBUG: Processing student: {estudiante_obj.primer_nombre} {estudiante_obj.primer_apellido}")
-
             clases = FichaAsignada.objects.filter(ficha__grado=estudiante_obj.grado).order_by('hora__hora_inicio', 'dia')
-
-            print(f"DEBUG: Classes found for student: {clases.count()}")
 
             for clase in clases:
 
                 dia_str = dict(FichaAsignada.DIAS_SEMANA).get(clase.dia)
-
-                print(f"DEBUG: Class: {clase.ficha.descripcion_ficha}, Dia: {dia_str}, Hora: {clase.hora.hora_inicio}, Asignatura: {clase.ficha.asignatura.nombre}, Profesor: {clase.ficha.profesor.primer_nombre}, Aula: {clase.aula.nombre}")
 
                 if dia_str:
 
@@ -278,8 +254,6 @@ def horario_view(request):
                     })
 
     
-
-    print(f"DEBUG: Final horario_por_dia: {horario_por_dia}")
 
     context = {
 
@@ -1077,7 +1051,7 @@ def api_get_tablero_data(request):
 
     horas = list(Hora.objects.values('id', 'hora_inicio', 'hora_fin').order_by('hora_inicio'))
 
-    aulas = list(Aula.objects.values('id', 'nombre'))
+    aulas = list(Aula.objects.values('id', 'nombre', 'abreviatura', 'capacidad'))
 
     
 
@@ -1112,7 +1086,8 @@ def api_get_tablero_data(request):
             'primer_apellido': p.primer_apellido,
             'abreviatura': p.abreviatura,
             'identificacion': p.identificacion,
-            'asignaturas_str': ', '.join([a.nombre for a in p.asignaturas.all()])
+            'asignaturas_str': ', '.join([a.nombre for a in p.asignaturas.all()]),
+            'asignaturas': [a.id for a in p.asignaturas.all()]
         })
 
     return JsonResponse({
@@ -1439,17 +1414,20 @@ def api_guardar_aula(request):
         try:
             data = json.loads(request.body)
             aula_id = data.get('id')
+            capacidad = int(data.get('capacidad', 30))
+            if capacidad < 1:
+                return JsonResponse({'error': 'La capacidad del aula debe ser mayor o igual a 1.'}, status=400)
             if aula_id:
                 aula = Aula.objects.get(id=aula_id)
                 aula.nombre = data.get('nombre', aula.nombre)
                 aula.abreviatura = data.get('abreviatura', aula.abreviatura)
-                aula.capacidad = data.get('capacidad', aula.capacidad)
+                aula.capacidad = capacidad
                 aula.save()
             else:
                 aula = Aula.objects.create(
                     nombre=data.get('nombre'),
                     abreviatura=data.get('abreviatura', ''),
-                    capacidad=data.get('capacidad', 30)
+                    capacidad=capacidad
                 )
             return JsonResponse({'success': True, 'id': aula.id})
         except Exception as e:
@@ -1476,19 +1454,22 @@ def api_guardar_ficha(request):
         try:
             data = json.loads(request.body)
             ficha_id = data.get('id')
+            horas_totales = int(data.get('horas_totales', 1))
+            if horas_totales < 1:
+                return JsonResponse({'error': 'Las horas totales deben ser mayores o iguales a 1.'}, status=400)
             if ficha_id:
                 ficha = Ficha.objects.get(id=ficha_id)
                 ficha.profesor_id = data.get('profesor_id')
                 ficha.asignatura_id = data.get('asignatura_id')
                 ficha.grado_id = data.get('grado_id')
-                ficha.horas_totales = data.get('horas_totales', ficha.horas_totales)
+                ficha.horas_totales = horas_totales
                 ficha.save()
             else:
                 ficha = Ficha.objects.create(
                     profesor_id=data.get('profesor_id'),
                     asignatura_id=data.get('asignatura_id'),
                     grado_id=data.get('grado_id'),
-                    horas_totales=data.get('horas_totales', 1)
+                    horas_totales=horas_totales
                 )
             return JsonResponse({'success': True, 'id': ficha.id})
         except Exception as e:
