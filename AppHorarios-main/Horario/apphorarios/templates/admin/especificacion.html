@@ -531,6 +531,7 @@
                     this.profesores = res.data.profesores;
                     this.grados = res.data.grados;
                     this.aulas = res.data.aulas;
+                    this.fichas = res.data.fichas;
                     // También cargamos las horas
                     const resHoras = await axios.get('/api/horario/individual/?tipo=grado&id=0'); // truco para obtener horas
                     this.horas = resHoras.data.estructura.filter(h => h.tipo === 'hora').map(h => ({
