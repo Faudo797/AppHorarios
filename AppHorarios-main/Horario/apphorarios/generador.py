@@ -140,38 +140,31 @@ def generar_horario(iteraciones=10, estrategia='2-2'):
                 if asig['aula_id'] == aula_id:
                     return False
                     
-        # Limitar la cantidad de veces que esta materia se dicta en este mismo día
+        # Limitar la cantidad de veces que esta materia se dicta en este mismo día y asegurar que sea consecutiva
         veces_en_dia = 0
+        assigned_indices = []
         for h_check in domain_horas:
             key_check = (dia, h_check)
             if key_check in grid:
                 for asig in grid[key_check]:
-                    if asig['ficha'].id == ficha.id:
+                    if asig['grado_id'] == ficha.grado_id and asig['ficha'].asignatura_id == ficha.asignatura_id:
                         veces_en_dia += 1
+                        assigned_indices.append(domain_horas.index(h_check))
                         
-        # Por defecto, intentar que solo haya 1 sesión (o 1 bloque) por día
-        limite_diario = 1
-        if ficha.horas_totales > len(domain_dias):
-            limite_diario = 2 # Si hay más horas que días en la semana, inevitablemente debe repetir algún día
-            
-        if veces_en_dia >= limite_diario:
-            return False
-            
-        # Evitar bloques (horas consecutivas) accidentales para la misma ficha
-        # Si la estrategia pide bloques (duracion=2), ambas horas se validan antes de entrar al grid, por lo que esto no las bloquea.
-        idx = domain_horas.index(hora_id)
-        if idx > 0:
-            key_ant = (dia, domain_horas[idx - 1])
-            if key_ant in grid:
-                for asig in grid[key_ant]:
-                    if asig['ficha'].id == ficha.id:
-                        return False
-        if idx < len(domain_horas) - 1:
-            key_sig = (dia, domain_horas[idx + 1])
-            if key_sig in grid:
-                for asig in grid[key_sig]:
-                    if asig['ficha'].id == ficha.id:
-                        return False
+        max_horas_por_dia = 1 if estrategia == '1-1-1-1' else 2
+        if veces_en_dia > 0:
+            if veces_en_dia >= max_horas_por_dia:
+                return False
+                
+            # La nueva hora debe ser consecutiva a alguna de las horas ya asignadas en el día
+            current_idx = domain_horas.index(hora_id)
+            es_consecutiva = False
+            for idx in assigned_indices:
+                if abs(current_idx - idx) == 1:
+                    es_consecutiva = True
+                    break
+            if not es_consecutiva:
+                return False
                         
         return True
 
@@ -198,7 +191,21 @@ def generar_horario(iteraciones=10, estrategia='2-2'):
         duracion = b['duracion']
         asignado = False
 
-        for dia in domain_dias:
+        # Ordenar los días para intentar primero los días con MENOS horas de esta ficha (balanceo)
+        def count_ficha_in_dia(dia_check):
+            count = 0
+            for h_check in domain_horas:
+                key_check = (dia_check, h_check)
+                if key_check in grid_actual:
+                    for asig in grid_actual[key_check]:
+                        if asig['ficha'].id == ficha_actual.id:
+                            count += 1
+            return count
+
+        dias_ordenados = list(domain_dias)
+        dias_ordenados.sort(key=count_ficha_in_dia)
+
+        for dia in dias_ordenados:
             if asignado: break
             for idx_h, hora_id in enumerate(domain_horas):
                 if asignado: break

@@ -6,8 +6,8 @@ import dj_database_url
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Quick-start development settings - unsuitable for production
-SECRET_KEY = 'django-insecure-g6c==##+1v(1srydmx8n$+xk#fk@f_g(et&lj$-7@^9wv#rvqd'
-DEBUG = True
+SECRET_KEY = os.environ.get('SECRET_KEY', 'fallback-secret-key-for-dev-only')
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 ALLOWED_HOSTS = ['apphorarios.onrender.com', 'localhost', '127.0.0.1']
 
 # Application definition
